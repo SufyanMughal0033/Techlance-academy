@@ -6,7 +6,6 @@ import {
   CheckCircle2,
   Clock3,
   GraduationCap,
-  IndianRupee,
   Sparkles,
 } from "lucide-react";
 
@@ -18,7 +17,7 @@ export const revalidate = 60;
 type Program = {
   id: string;
   slug: string;
-  title: string;
+  name: string;
   description?: string | null;
   short_description?: string | null;
   category?: string | null;
@@ -43,7 +42,6 @@ export default async function ProgramDetailPage({
     .from("programs")
     .select("*")
     .eq("slug", slug)
-    .eq("status", "active")
     .single();
 
   if (error || !program) {
@@ -86,6 +84,50 @@ export default async function ProgramDetailPage({
 
   const typedProgram = program as Program;
 
+  // Treat missing status as active, and allow active/published programs.
+  const isActive =
+    !typedProgram.status ||
+    typedProgram.status === "active" ||
+    typedProgram.status === "published";
+
+  if (!isActive) {
+    return (
+      <>
+        <PageHero
+          eyebrow="Program"
+          title="Program not available"
+          description="This program is currently not available."
+        />
+
+        <section className="py-16 sm:py-20">
+          <div className="container-academy">
+            <div className="mx-auto max-w-xl rounded-3xl border border-dashed border-border bg-muted/20 px-6 py-14 text-center">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">
+                <BookOpen className="h-6 w-6 text-primary" />
+              </div>
+
+              <h2 className="mt-5 text-2xl font-bold">
+                Program not available
+              </h2>
+
+              <p className="mt-3 text-sm leading-6 text-muted-foreground">
+                This program is currently unavailable for admission.
+              </p>
+
+              <Link
+                href="/programs"
+                className="mt-7 inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:opacity-90"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Back to Programs
+              </Link>
+            </div>
+          </div>
+        </section>
+      </>
+    );
+  }
+
   const description =
     typedProgram.description ||
     typedProgram.short_description ||
@@ -95,7 +137,7 @@ export default async function ProgramDetailPage({
     <>
       <PageHero
         eyebrow={typedProgram.category || "Techlance Academy"}
-        title={typedProgram.title}
+        title={typedProgram.name}
         description={description}
       />
 
@@ -108,7 +150,7 @@ export default async function ProgramDetailPage({
                 <div className="overflow-hidden rounded-3xl border border-border bg-muted">
                   <img
                     src={typedProgram.image_url}
-                    alt={typedProgram.title}
+                    alt={typedProgram.name}
                     className="aspect-[16/8] w-full object-cover"
                   />
                 </div>
@@ -151,7 +193,10 @@ export default async function ProgramDetailPage({
                   </div>
 
                   <div>
-                    <h3 className="text-xl font-bold">What You'll Learn</h3>
+                    <h3 className="text-xl font-bold">
+                      What You'll Learn
+                    </h3>
+
                     <p className="mt-1 text-sm text-muted-foreground">
                       Practical skills you can apply beyond the classroom.
                     </p>
@@ -220,7 +265,9 @@ export default async function ProgramDetailPage({
                           <Icon className="h-5 w-5 text-primary" />
                         </div>
 
-                        <h4 className="mt-4 font-semibold">{item.title}</h4>
+                        <h4 className="mt-4 font-semibold">
+                          {item.title}
+                        </h4>
 
                         <p className="mt-2 text-xs leading-6 text-muted-foreground">
                           {item.text}
@@ -241,7 +288,7 @@ export default async function ProgramDetailPage({
                   </p>
 
                   <h3 className="mt-3 text-2xl font-bold">
-                    {typedProgram.title}
+                    {typedProgram.name}
                   </h3>
                 </div>
 
@@ -256,6 +303,7 @@ export default async function ProgramDetailPage({
                         <p className="text-xs text-muted-foreground">
                           Duration
                         </p>
+
                         <p className="mt-1 text-sm font-semibold">
                           {typedProgram.duration}
                         </p>
@@ -273,6 +321,7 @@ export default async function ProgramDetailPage({
                         <p className="text-xs text-muted-foreground">
                           Level
                         </p>
+
                         <p className="mt-1 text-sm font-semibold">
                           {typedProgram.level}
                         </p>
@@ -290,6 +339,7 @@ export default async function ProgramDetailPage({
                         <p className="text-xs text-muted-foreground">
                           Category
                         </p>
+
                         <p className="mt-1 text-sm font-semibold">
                           {typedProgram.category}
                         </p>
@@ -311,7 +361,7 @@ export default async function ProgramDetailPage({
 
                   <Link
                     href={`/apply?program=${encodeURIComponent(
-                      typedProgram.slug,
+                      typedProgram.slug
                     )}`}
                     className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3.5 text-sm font-semibold text-primary-foreground transition hover:opacity-90"
                   >
@@ -354,7 +404,7 @@ export default async function ProgramDetailPage({
               <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">
                 <Link
                   href={`/apply?program=${encodeURIComponent(
-                    typedProgram.slug,
+                    typedProgram.slug
                   )}`}
                   className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition hover:opacity-90"
                 >

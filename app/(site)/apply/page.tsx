@@ -1,23 +1,24 @@
-import { PageHero } from "@/components/marketing/page-hero";
+import type { Metadata } from "next";
 
-export const metadata = {
-  title: "Apply Now",
-  description: "Start your application to Techlance Academy.",
+import { PageHero } from "@/components/marketing/page-hero";
+import { ApplyForm } from "@/components/marketing/apply-form";
+
+export const metadata: Metadata = {
+  title: "Apply | Techlance Academy",
+  description:
+    "Apply for admission to Techlance Academy and start building practical digital skills.",
 };
 
-export default function Page() {
+export default function ApplyPage() {
   return (
     <>
       <PageHero
-        eyebrow="Application"
-        title="Apply Now"
-        description="Start your application to Techlance Academy."
+        eyebrow="Admissions"
+        title="Apply to Techlance Academy"
+        description="Complete the application form below. Our admissions team will review your application and contact you with the next steps."
       />
-      <div className="container-academy py-14">
-        <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
-          The full application form — personal information, education, skills, program preference, and learning mode — will be built here with React Hook Form and Zod validation, saving directly to the `applications` table and returning a trackable application ID.
-        </p>
-      </div>
+
+      <ApplyForm />
     </>
   );
 }

@@ -20,7 +20,7 @@ export const metadata = {
 type Program = {
   id: string;
   slug: string;
-  title: string;
+  name: string;
   description?: string | null;
   short_description?: string | null;
   category?: string | null;
@@ -43,20 +43,18 @@ function getProgramDescription(program: Program) {
 export default async function Page({
   searchParams,
 }: {
-  searchParams: {
+  searchParams: Promise<{
     q?: string;
     category?: string;
     level?: string;
     duration?: string;
-  };
+  }>;
 }) {
-  // IMPORTANT: createClient() is async in lib/supabase/server.ts
   const supabase = await createClient();
 
   const { data, error } = await supabase
     .from("programs")
     .select("*")
-    .order("featured", { ascending: false })
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -65,18 +63,21 @@ export default async function Page({
 
   const programs = (data || []) as Program[];
 
-  const query = searchParams.q?.trim().toLowerCase() || "";
-  const selectedCategory = searchParams.category || "";
-  const selectedLevel = searchParams.level || "";
-  const selectedDuration = searchParams.duration || "";
+  // Next.js App Router: searchParams is a Promise
+  const params = await searchParams;
+
+  const query = params.q?.trim().toLowerCase() || "";
+  const selectedCategory = params.category || "";
+  const selectedLevel = params.level || "";
+  const selectedDuration = params.duration || "";
 
   const categories = Array.from(
     new Set(
       programs
         .map((program) => program.category)
         .filter(Boolean)
-        .map((category) => category as string),
-    ),
+        .map((category) => category as string)
+    )
   ).sort();
 
   const levels = Array.from(
@@ -84,8 +85,8 @@ export default async function Page({
       programs
         .map((program) => program.level)
         .filter(Boolean)
-        .map((level) => level as string),
-    ),
+        .map((level) => level as string)
+    )
   ).sort();
 
   const durations = Array.from(
@@ -93,13 +94,13 @@ export default async function Page({
       programs
         .map((program) => program.duration)
         .filter(Boolean)
-        .map((duration) => duration as string),
-    ),
+        .map((duration) => duration as string)
+    )
   ).sort();
 
   const filteredPrograms = programs.filter((program) => {
     const searchableText = [
-      program.title,
+      program.name,
       program.category,
       program.level,
       program.duration,
@@ -203,7 +204,7 @@ export default async function Page({
               <input
                 type="search"
                 name="q"
-                defaultValue={searchParams.q || ""}
+                defaultValue={params.q || ""}
                 placeholder="Search programs..."
                 className="h-11 w-full rounded-xl border border-border bg-background pl-11 pr-4 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
               />
@@ -293,7 +294,7 @@ export default async function Page({
                     {program.image_url ? (
                       <img
                         src={program.image_url}
-                        alt={program.title}
+                        alt={program.name}
                         className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
                       />
                     ) : (
@@ -327,7 +328,7 @@ export default async function Page({
                     </div>
 
                     <h3 className="mt-4 text-xl font-bold tracking-tight">
-                      {program.title}
+                      {program.name}
                     </h3>
 
                     <p className="mt-3 line-clamp-3 text-sm leading-6 text-muted-foreground">
@@ -423,7 +424,7 @@ export default async function Page({
 
               <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">
                 <Link
-                  href="/admissions"
+                  href="/apply"
                   className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition hover:opacity-90"
                 >
                   Apply for Admission
