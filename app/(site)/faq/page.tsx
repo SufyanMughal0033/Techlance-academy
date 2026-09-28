@@ -1,8 +1,11 @@
+import type { Metadata } from "next";
+import FAQContent from "@/components/marketing/faq-content";
 import { PageHero } from "@/components/marketing/page-hero";
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "Frequently Asked Questions",
-  description: "Answers to common questions about admissions, programs, fees, classes, and certificates.",
+  description:
+    "Answers to common questions about admissions, programs, fees, classes, and certificates at Techlance Academy.",
 };
 
 export default function Page() {
@@ -13,11 +16,8 @@ export default function Page() {
         title="Frequently Asked Questions"
         description="Answers to common questions about admissions, programs, fees, classes, and certificates."
       />
-      <div className="container-academy py-14">
-        <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
-          FAQs will be categorized and admin-managed, rendered here as a searchable accordion sourced from the `faqs` table.
-        </p>
-      </div>
+
+      <FAQContent />
     </>
   );
 }

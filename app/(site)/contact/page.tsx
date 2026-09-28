@@ -1,8 +1,11 @@
+import type { Metadata } from "next";
 import { PageHero } from "@/components/marketing/page-hero";
+import ContactContent from "@/components/marketing/contact-content";
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "Contact Us",
-  description: "Questions about a program or your application? Reach out.",
+  description:
+    "Questions about a program or your application? Contact Techlance Academy for admissions, programs, and course information.",
 };
 
 export default function Page() {
@@ -10,14 +13,11 @@ export default function Page() {
     <>
       <PageHero
         eyebrow="Contact"
-        title="Contact Us"
-        description="Questions about a program or your application? Reach out."
+        title="Let's Talk"
+        description="Have a question about a program, admission, or your learning journey? Our team is here to help."
       />
-      <div className="container-academy py-14">
-        <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
-          A validated contact form will live here, saving inquiries to the `contact_messages` table, alongside our email, phone, WhatsApp, and business hours.
-        </p>
-      </div>
+
+      <ContactContent />
     </>
   );
 }
