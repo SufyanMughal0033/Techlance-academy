@@ -1,21 +1,158 @@
-import { Card, CardContent } from "@/components/ui/card";
+import { createClient } from "@/lib/supabase/server";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export const metadata = { title: "Students" };
 
-export default function Page() {
+export default async function StudentsPage() {
+  const supabase = await createClient();
+
+  const { data: students, error } = await supabase
+    .from("profiles")
+    .select(
+      "id, fullname, email, phone, program, qualification, city, experience, role, is_active, created_at"
+    )
+    .eq("role", "student")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    return (
+      <div className="flex flex-col gap-6">
+        <div>
+          <h2 className="font-display text-xl font-semibold text-foreground">
+            Students
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Manage registered Techlance Academy students.
+          </p>
+        </div>
+
+        <Card>
+          <CardContent className="py-10 text-center text-sm text-destructive">
+            Failed to load students: {error.message}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h2 className="font-display text-xl font-semibold text-foreground">Students</h2>
-        <p className="mt-1 max-w-xl text-sm text-muted-foreground">
-          Every student account: add, edit, deactivate, manage enrollment, and view progress.
+        <h2 className="font-display text-xl font-semibold text-foreground">
+          Students
+        </h2>
+        <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+          View and manage registered students, their profiles, programs, and
+          account status.
         </p>
       </div>
+
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Total Students
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-semibold">{students?.length ?? 0}</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Active Students
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-semibold">
+              {students?.filter((student) => student.is_active).length ?? 0}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Inactive Students
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-semibold">
+              {students?.filter((student) => !student.is_active).length ?? 0}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
       <Card>
-        <CardContent className="py-14 text-center text-sm text-muted-foreground">
-          This section&apos;s data views and actions are built in a later phase,
-          once real Supabase data and CRUD flows are wired up on top of this
-          foundation.
+        <CardHeader>
+          <CardTitle>Student Accounts</CardTitle>
+        </CardHeader>
+
+        <CardContent>
+          {!students?.length ? (
+            <div className="py-12 text-center text-sm text-muted-foreground">
+              No student accounts found.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[900px] text-sm">
+                <thead>
+                  <tr className="border-b text-left">
+                    <th className="px-4 py-3 font-medium">Student</th>
+                    <th className="px-4 py-3 font-medium">Email</th>
+                    <th className="px-4 py-3 font-medium">Phone</th>
+                    <th className="px-4 py-3 font-medium">Program</th>
+                    <th className="px-4 py-3 font-medium">City</th>
+                    <th className="px-4 py-3 font-medium">Status</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {students.map((student) => (
+                    <tr
+                      key={student.id}
+                      className="border-b last:border-0"
+                    >
+                      <td className="px-4 py-4 font-medium">
+                        {student.fullname}
+                      </td>
+
+                      <td className="px-4 py-4 text-muted-foreground">
+                        {student.email}
+                      </td>
+
+                      <td className="px-4 py-4">
+                        {student.phone || "—"}
+                      </td>
+
+                      <td className="px-4 py-4">
+                        {student.program || "—"}
+                      </td>
+
+                      <td className="px-4 py-4">
+                        {student.city || "—"}
+                      </td>
+
+                      <td className="px-4 py-4">
+                        <span
+                          className={
+                            student.is_active
+                              ? "rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-700"
+                              : "rounded-full bg-red-100 px-2.5 py-1 text-xs font-medium text-red-700"
+                          }
+                        >
+                          {student.is_active ? "Active" : "Inactive"}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
