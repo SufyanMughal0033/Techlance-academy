@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme/theme-provider";
 import { siteConfig } from "@/lib/site-config";
+import { SmoothScroll } from "@/components/smooth-scroll/smooth-scroll";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteConfig.url),
