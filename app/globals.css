@@ -62,9 +62,6 @@
 /* teal for contrast, gold accent kept for the same sparing use.          */
 /* ---------------------------------------------------------------------- */
 
-html {
-  scroll-behavior: smooth;
-}
 .dark {
   --background: #0e1013;
   --foreground: #ecece7;
