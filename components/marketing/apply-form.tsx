@@ -1,14 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
-import Link from "next/link";
-import {
-  ArrowRight,
-  CheckCircle2,
-  Loader2,
-  Send,
-} from "lucide-react";
-
+import { CheckCircle2, Loader2, Send } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 type Program = {
@@ -17,418 +10,416 @@ type Program = {
   title: string;
 };
 
-const supabase = createClient();
+type FormState = {
+  full_name: string;
+  email: string;
+  phone: string;
+  program: string;
+  qualification: string;
+  city: string;
+  experience: string;
+  message: string;
+};
+
+const initialForm: FormState = {
+  full_name: "",
+  email: "",
+  phone: "",
+  program: "",
+  qualification: "",
+  city: "",
+  experience: "",
+  message: "",
+};
 
 export function ApplyForm() {
+  const supabase = createClient();
+
   const [programs, setPrograms] = useState<Program[]>([]);
+  const [selectedProgram, setSelectedProgram] = useState<Program | null>(
+    null,
+  );
+
+  const [form, setForm] = useState<FormState>(initialForm);
   const [loadingPrograms, setLoadingPrograms] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
-  const [form, setForm] = useState({
-    full_name: "",
-    email: "",
-    phone: "",
-    program: "",
-    qualification: "",
-    city: "",
-    experience: "",
-    message: "",
-  });
-
   useEffect(() => {
     async function loadPrograms() {
-      try {
-        const { data, error } = await supabase
-          .from("programs")
-          .select("id, slug, title");
+      setLoadingPrograms(true);
+      setErrorMessage("");
 
-        if (error) {
-          console.error("Programs loading error:", error);
-          setPrograms([]);
-          return;
-        }
+      const { data, error } = await supabase
+        .from("programs")
+        .select("id, slug, title")
+        .eq("status", "active")
+        .order("created_at", { ascending: false });
 
-       setPrograms((data || []) as unknown as Program[]);
-      } catch (error) {
-        console.error("Programs loading error:", error);
-        setPrograms([]);
-      } finally {
+      if (error) {
+        console.error("Programs loading error:", {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code,
+        });
+
+        setErrorMessage(
+          "Unable to load programs right now. Please try again.",
+        );
+
         setLoadingPrograms(false);
+        return;
       }
+
+      setPrograms((data || []) as Program[]);
+      setLoadingPrograms(false);
     }
 
     loadPrograms();
   }, []);
 
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const programSlug = params.get("program");
-
-    if (!programSlug || programs.length === 0) {
-      return;
-    }
-
-    const selectedProgram = programs.find(
-      (program) => program.slug === programSlug
-    );
-
-    if (selectedProgram) {
-      setForm((current) => ({
-        ...current,
-        program: selectedProgram.slug,
-      }));
-    }
-  }, [programs]);
-
   function handleChange(
-    event: React.ChangeEvent<
+    e: React.ChangeEvent<
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >
+    >,
   ) {
-    const { name, value } = event.target;
+    const { name, value } = e.target;
 
-    setForm((current) => ({
-      ...current,
+    setForm((previous) => ({
+      ...previous,
       [name]: value,
     }));
+
+    if (name === "program") {
+      const program =
+        programs.find((item) => item.slug === value) || null;
+
+      setSelectedProgram(program);
+    }
   }
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
 
     setSubmitting(true);
-    setErrorMessage("");
     setSuccess(false);
+    setErrorMessage("");
 
-    const selectedProgram = programs.find(
-      (program) => program.slug === form.program
-    );
-
-    if (!selectedProgram) {
-      setErrorMessage("Please select a valid program.");
+    if (!form.full_name.trim()) {
+      setErrorMessage("Please enter your full name.");
       setSubmitting(false);
       return;
     }
 
-    try {
-      const { error } = await supabase.from("applications").insert({
-        full_name: form.full_name.trim(),
-        email: form.email.trim(),
-        phone: form.phone.trim(),
-        program: selectedProgram.title,
-        qualification: form.qualification.trim() || null,
-        city: form.city.trim() || null,
-        experience: form.experience.trim() || null,
-        message: form.message.trim() || null,
-        agreed_to_terms: true,
+    if (!form.email.trim()) {
+      setErrorMessage("Please enter your email address.");
+      setSubmitting(false);
+      return;
+    }
+
+    if (!form.phone.trim()) {
+      setErrorMessage("Please enter your phone number.");
+      setSubmitting(false);
+      return;
+    }
+
+    if (!selectedProgram) {
+      setErrorMessage("Please select a program.");
+      setSubmitting(false);
+      return;
+    }
+
+    const { error } = await supabase.from("applications").insert({
+      full_name: form.full_name.trim(),
+      email: form.email.trim(),
+      phone: form.phone.trim(),
+      program: selectedProgram.title,
+      qualification: form.qualification.trim() || null,
+      city: form.city.trim() || null,
+      experience: form.experience.trim() || null,
+      message: form.message.trim() || null,
+    });
+
+    if (error) {
+      console.error("Application submission error:", {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code,
       });
-
-      if (error) {
-        console.error("Application submission error:", error);
-
-        setErrorMessage(
-          "We couldn't submit your application right now. Please try again."
-        );
-
-        return;
-      }
-
-      setSuccess(true);
-
-      setForm({
-        full_name: "",
-        email: "",
-        phone: "",
-        program: "",
-        qualification: "",
-        city: "",
-        experience: "",
-        message: "",
-      });
-    } catch (error) {
-      console.error("Application submission error:", error);
 
       setErrorMessage(
-        "We couldn't submit your application right now. Please try again."
+        error.message || "Something went wrong. Please try again.",
       );
-    } finally {
+
       setSubmitting(false);
+      return;
     }
-  }
 
-  if (success) {
-    return (
-      <section className="py-16 sm:py-20">
-        <div className="container-academy">
-          <div className="mx-auto max-w-2xl rounded-[2rem] border border-border bg-card px-7 py-14 text-center shadow-sm sm:px-12">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
-              <CheckCircle2 className="h-8 w-8 text-primary" />
-            </div>
-
-            <h2 className="mt-6 text-3xl font-bold tracking-tight">
-              Application Submitted
-            </h2>
-
-            <p className="mx-auto mt-4 max-w-lg text-sm leading-7 text-muted-foreground sm:text-base">
-              Thank you for applying to Techlance Academy. Our admissions team
-              will review your application and contact you with the next steps.
-            </p>
-
-            <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-              <Link
-                href="/programs"
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition hover:opacity-90"
-              >
-                Explore Programs
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-
-              <Link
-                href="/"
-                className="inline-flex items-center justify-center rounded-xl border border-border bg-background px-6 py-3 text-sm font-semibold transition hover:bg-muted"
-              >
-                Back to Home
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
-    );
+    setSuccess(true);
+    setForm(initialForm);
+    setSelectedProgram(null);
+    setSubmitting(false);
   }
 
   return (
-    <section className="py-16 sm:py-20">
+    <section className="relative overflow-hidden py-16 sm:py-20 lg:py-24">
       <div className="container-academy">
-        <div className="mx-auto max-w-4xl">
-          <div className="mb-8">
-            <span className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-              Application Form
+        <div className="mx-auto max-w-3xl">
+          <div className="mb-10 text-center">
+            <span className="mb-3 inline-flex rounded-full border border-black/10 bg-black/[0.03] px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-black/60 dark:border-white/10 dark:bg-white/[0.04] dark:text-white/60">
+              Admission Application
             </span>
 
-            <h2 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
-              Tell us about yourself.
+            <h2 className="mt-4 text-3xl font-semibold tracking-tight text-black sm:text-4xl dark:text-white">
+              Start your application
             </h2>
 
-            <p className="mt-3 max-w-2xl text-sm leading-7 text-muted-foreground sm:text-base">
-              Please provide accurate information so our admissions team can
-              understand your goals and guide you through the next step.
+            <p className="mx-auto mt-4 max-w-2xl text-sm leading-7 text-black/60 sm:text-base dark:text-white/60">
+              Complete the form below and our admissions team will review your
+              application and contact you with the next steps.
             </p>
           </div>
 
-          <form
-            onSubmit={handleSubmit}
-            className="rounded-[2rem] border border-border bg-card p-6 shadow-sm sm:p-8"
-          >
-            <div className="grid gap-6 md:grid-cols-2">
-              {/* Full Name */}
-              <div>
-                <label
-                  htmlFor="full_name"
-                  className="mb-2 block text-sm font-semibold"
-                >
-                  Full Name <span className="text-primary">*</span>
-                </label>
-
-                <input
-                  id="full_name"
-                  name="full_name"
-                  type="text"
-                  required
-                  value={form.full_name}
-                  onChange={handleChange}
-                  placeholder="Enter your full name"
-                  className="h-12 w-full rounded-xl border border-border bg-background px-4 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
-                />
+          {success ? (
+            <div className="rounded-3xl border border-emerald-500/20 bg-emerald-500/[0.06] p-8 text-center sm:p-12">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/10">
+                <CheckCircle2 className="h-9 w-9 text-emerald-500" />
               </div>
 
-              {/* Email */}
-              <div>
-                <label
-                  htmlFor="email"
-                  className="mb-2 block text-sm font-semibold"
-                >
-                  Email Address <span className="text-primary">*</span>
-                </label>
+              <h3 className="mt-6 text-2xl font-semibold text-black dark:text-white">
+                Application submitted successfully
+              </h3>
 
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  required
-                  value={form.email}
-                  onChange={handleChange}
-                  placeholder="you@example.com"
-                  className="h-12 w-full rounded-xl border border-border bg-background px-4 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
-                />
-              </div>
-
-              {/* Phone */}
-              <div>
-                <label
-                  htmlFor="phone"
-                  className="mb-2 block text-sm font-semibold"
-                >
-                  Phone Number <span className="text-primary">*</span>
-                </label>
-
-                <input
-                  id="phone"
-                  name="phone"
-                  type="tel"
-                  required
-                  value={form.phone}
-                  onChange={handleChange}
-                  placeholder="+92 3XX XXXXXXX"
-                  className="h-12 w-full rounded-xl border border-border bg-background px-4 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
-                />
-              </div>
-
-              {/* Program */}
-              <div>
-                <label
-                  htmlFor="program"
-                  className="mb-2 block text-sm font-semibold"
-                >
-                  Select Program <span className="text-primary">*</span>
-                </label>
-
-                <select
-                  id="program"
-                  name="program"
-                  required
-                  value={form.program}
-                  onChange={handleChange}
-                  disabled={loadingPrograms}
-                  className="h-12 w-full rounded-xl border border-border bg-background px-4 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  <option value="">
-                    {loadingPrograms
-                      ? "Loading programs..."
-                      : "Select a program"}
-                  </option>
-
-                  {programs.map((program) => (
-                    <option key={program.id} value={program.slug}>
-                      {program.title}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Qualification */}
-              <div>
-                <label
-                  htmlFor="qualification"
-                  className="mb-2 block text-sm font-semibold"
-                >
-                  Highest Qualification
-                </label>
-
-                <input
-                  id="qualification"
-                  name="qualification"
-                  type="text"
-                  value={form.qualification}
-                  onChange={handleChange}
-                  placeholder="e.g. Intermediate, Bachelor"
-                  className="h-12 w-full rounded-xl border border-border bg-background px-4 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
-                />
-              </div>
-
-              {/* City */}
-              <div>
-                <label
-                  htmlFor="city"
-                  className="mb-2 block text-sm font-semibold"
-                >
-                  City
-                </label>
-
-                <input
-                  id="city"
-                  name="city"
-                  type="text"
-                  value={form.city}
-                  onChange={handleChange}
-                  placeholder="e.g. Faisalabad"
-                  className="h-12 w-full rounded-xl border border-border bg-background px-4 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
-                />
-              </div>
-
-              {/* Experience */}
-              <div className="md:col-span-2">
-                <label
-                  htmlFor="experience"
-                  className="mb-2 block text-sm font-semibold"
-                >
-                  Previous Experience
-                </label>
-
-                <input
-                  id="experience"
-                  name="experience"
-                  type="text"
-                  value={form.experience}
-                  onChange={handleChange}
-                  placeholder="e.g. Beginner / 1 year freelance experience"
-                  className="h-12 w-full rounded-xl border border-border bg-background px-4 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
-                />
-              </div>
-
-              {/* Message */}
-              <div className="md:col-span-2">
-                <label
-                  htmlFor="message"
-                  className="mb-2 block text-sm font-semibold"
-                >
-                  Why do you want to join?
-                </label>
-
-                <textarea
-                  id="message"
-                  name="message"
-                  rows={6}
-                  value={form.message}
-                  onChange={handleChange}
-                  placeholder="Tell us about your goals, interests, or what you want to learn..."
-                  className="w-full resize-none rounded-xl border border-border bg-background px-4 py-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
-                />
-              </div>
-            </div>
-
-            {errorMessage && (
-              <div className="mt-6 rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-3 text-sm text-red-600">
-                {errorMessage}
-              </div>
-            )}
-
-            <div className="mt-8 flex flex-col items-start justify-between gap-5 border-t border-border pt-6 sm:flex-row sm:items-center">
-              <p className="max-w-md text-xs leading-5 text-muted-foreground">
-                By submitting this form, you confirm that the information
-                provided is accurate.
+              <p className="mx-auto mt-3 max-w-xl text-sm leading-7 text-black/60 dark:text-white/60">
+                Thank you for applying to Techlance Academy. Our admissions
+                team will review your application and contact you soon.
               </p>
 
               <button
+                type="button"
+                onClick={() => setSuccess(false)}
+                className="mt-7 inline-flex items-center justify-center rounded-xl bg-black px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90 dark:bg-white dark:text-black"
+              >
+                Submit another application
+              </button>
+            </div>
+          ) : (
+            <form
+              onSubmit={handleSubmit}
+              className="rounded-3xl border border-black/10 bg-white p-6 shadow-[0_20px_70px_rgba(0,0,0,0.06)] sm:p-8 dark:border-white/10 dark:bg-white/[0.03]"
+            >
+              <div className="grid gap-6 sm:grid-cols-2">
+                {/* Full Name */}
+                <div>
+                  <label
+                    htmlFor="full_name"
+                    className="mb-2 block text-sm font-medium text-black dark:text-white"
+                  >
+                    Full Name <span className="text-red-500">*</span>
+                  </label>
+
+                  <input
+                    id="full_name"
+                    name="full_name"
+                    type="text"
+                    value={form.full_name}
+                    onChange={handleChange}
+                    placeholder="Enter your full name"
+                    required
+                    className="w-full rounded-xl border border-black/10 bg-transparent px-4 py-3 text-sm outline-none transition placeholder:text-black/35 focus:border-black/30 dark:border-white/10 dark:text-white dark:placeholder:text-white/30 dark:focus:border-white/30"
+                  />
+                </div>
+
+                {/* Email */}
+                <div>
+                  <label
+                    htmlFor="email"
+                    className="mb-2 block text-sm font-medium text-black dark:text-white"
+                  >
+                    Email Address <span className="text-red-500">*</span>
+                  </label>
+
+                  <input
+                    id="email"
+                    name="email"
+                    type="email"
+                    value={form.email}
+                    onChange={handleChange}
+                    placeholder="you@example.com"
+                    required
+                    className="w-full rounded-xl border border-black/10 bg-transparent px-4 py-3 text-sm outline-none transition placeholder:text-black/35 focus:border-black/30 dark:border-white/10 dark:text-white dark:placeholder:text-white/30 dark:focus:border-white/30"
+                  />
+                </div>
+
+                {/* Phone */}
+                <div>
+                  <label
+                    htmlFor="phone"
+                    className="mb-2 block text-sm font-medium text-black dark:text-white"
+                  >
+                    Phone Number <span className="text-red-500">*</span>
+                  </label>
+
+                  <input
+                    id="phone"
+                    name="phone"
+                    type="tel"
+                    value={form.phone}
+                    onChange={handleChange}
+                    placeholder="+92 3XX XXXXXXX"
+                    required
+                    className="w-full rounded-xl border border-black/10 bg-transparent px-4 py-3 text-sm outline-none transition placeholder:text-black/35 focus:border-black/30 dark:border-white/10 dark:text-white dark:placeholder:text-white/30 dark:focus:border-white/30"
+                  />
+                </div>
+
+                {/* Program */}
+                <div>
+                  <label
+                    htmlFor="program"
+                    className="mb-2 block text-sm font-medium text-black dark:text-white"
+                  >
+                    Select Program <span className="text-red-500">*</span>
+                  </label>
+
+                  <select
+                    id="program"
+                    name="program"
+                    value={form.program}
+                    onChange={handleChange}
+                    required
+                    disabled={loadingPrograms}
+                    className="w-full rounded-xl border border-black/10 bg-white px-4 py-3 text-sm outline-none transition focus:border-black/30 dark:border-white/10 dark:bg-[#111315] dark:text-white dark:focus:border-white/30"
+                  >
+                    <option value="">
+                      {loadingPrograms
+                        ? "Loading programs..."
+                        : "Select a program"}
+                    </option>
+
+                    {programs.map((program) => (
+                      <option key={program.id} value={program.slug}>
+                        {program.title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Qualification */}
+                <div>
+                  <label
+                    htmlFor="qualification"
+                    className="mb-2 block text-sm font-medium text-black dark:text-white"
+                  >
+                    Qualification
+                  </label>
+
+                  <input
+                    id="qualification"
+                    name="qualification"
+                    type="text"
+                    value={form.qualification}
+                    onChange={handleChange}
+                    placeholder="e.g. Intermediate, Bachelor's"
+                    className="w-full rounded-xl border border-black/10 bg-transparent px-4 py-3 text-sm outline-none transition placeholder:text-black/35 focus:border-black/30 dark:border-white/10 dark:text-white dark:placeholder:text-white/30 dark:focus:border-white/30"
+                  />
+                </div>
+
+                {/* City */}
+                <div>
+                  <label
+                    htmlFor="city"
+                    className="mb-2 block text-sm font-medium text-black dark:text-white"
+                  >
+                    City
+                  </label>
+
+                  <input
+                    id="city"
+                    name="city"
+                    type="text"
+                    value={form.city}
+                    onChange={handleChange}
+                    placeholder="e.g. Faisalabad"
+                    className="w-full rounded-xl border border-black/10 bg-transparent px-4 py-3 text-sm outline-none transition placeholder:text-black/35 focus:border-black/30 dark:border-white/10 dark:text-white dark:placeholder:text-white/30 dark:focus:border-white/30"
+                  />
+                </div>
+
+                {/* Experience */}
+                <div className="sm:col-span-2">
+                  <label
+                    htmlFor="experience"
+                    className="mb-2 block text-sm font-medium text-black dark:text-white"
+                  >
+                    Previous Experience
+                  </label>
+
+                  <input
+                    id="experience"
+                    name="experience"
+                    type="text"
+                    value={form.experience}
+                    onChange={handleChange}
+                    placeholder="Tell us briefly about your previous experience"
+                    className="w-full rounded-xl border border-black/10 bg-transparent px-4 py-3 text-sm outline-none transition placeholder:text-black/35 focus:border-black/30 dark:border-white/10 dark:text-white dark:placeholder:text-white/30 dark:focus:border-white/30"
+                  />
+                </div>
+
+                {/* Message */}
+                <div className="sm:col-span-2">
+                  <label
+                    htmlFor="message"
+                    className="mb-2 block text-sm font-medium text-black dark:text-white"
+                  >
+                    Additional Message
+                  </label>
+
+                  <textarea
+                    id="message"
+                    name="message"
+                    value={form.message}
+                    onChange={handleChange}
+                    placeholder="Anything else you would like us to know?"
+                    rows={5}
+                    className="w-full resize-none rounded-xl border border-black/10 bg-transparent px-4 py-3 text-sm outline-none transition placeholder:text-black/35 focus:border-black/30 dark:border-white/10 dark:text-white dark:placeholder:text-white/30 dark:focus:border-white/30"
+                  />
+                </div>
+              </div>
+
+              {/* Error */}
+              {errorMessage && (
+                <div className="mt-6 rounded-xl border border-red-500/20 bg-red-500/[0.06] px-4 py-3 text-sm text-red-600 dark:text-red-400">
+                  {errorMessage}
+                </div>
+              )}
+
+              {/* Submit */}
+              <button
                 type="submit"
                 disabled={submitting || loadingPrograms}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-7 py-3.5 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+                className="mt-8 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-black px-5 py-3.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white dark:text-black"
               >
                 {submitting ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Submitting...
+                    Submitting Application...
                   </>
                 ) : (
                   <>
-                    Submit Application
                     <Send className="h-4 w-4" />
+                    Submit Application
                   </>
                 )}
               </button>
-            </div>
-          </form>
+
+              <p className="mt-4 text-center text-xs leading-5 text-black/45 dark:text-white/40">
+                By submitting this form, you confirm that the information
+                provided is accurate.
+              </p>
+            </form>
+          )}
         </div>
       </div>
     </section>
