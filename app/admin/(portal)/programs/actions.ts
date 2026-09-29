@@ -1,17 +1,21 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
-export async function createProgram(formData: FormData) {
+export async function createProgram(formData: FormData): Promise<void> {
   const supabase = await createClient();
 
   const title = String(formData.get("title") ?? "").trim();
-  const slug = String(formData.get("slug") ?? "").trim().toLowerCase();
+  const slug = String(formData.get("slug") ?? "")
+    .trim()
+    .toLowerCase();
   const status = String(formData.get("status") ?? "draft").trim();
 
   if (!title || !slug) {
-    return { error: "Title and slug are required." };
+    console.error("Create Program: Title and slug are required.");
+    return;
   }
 
   const { error } = await supabase.from("programs").insert({
@@ -21,24 +25,27 @@ export async function createProgram(formData: FormData) {
   });
 
   if (error) {
-    return { error: error.message };
+    console.error("Create Program Error:", error);
+    throw new Error(error.message);
   }
 
   revalidatePath("/admin/programs");
-
-  return { success: true };
+  redirect("/admin/programs");
 }
 
-export async function updateProgram(formData: FormData) {
+export async function updateProgram(formData: FormData): Promise<void> {
   const supabase = await createClient();
 
-  const id = String(formData.get("id") ?? "");
+  const id = String(formData.get("id") ?? "").trim();
   const title = String(formData.get("title") ?? "").trim();
-  const slug = String(formData.get("slug") ?? "").trim().toLowerCase();
+  const slug = String(formData.get("slug") ?? "")
+    .trim()
+    .toLowerCase();
   const status = String(formData.get("status") ?? "draft").trim();
 
   if (!id || !title || !slug) {
-    return { error: "Program information is incomplete." };
+    console.error("Update Program: Program information is incomplete.");
+    return;
   }
 
   const { error } = await supabase
@@ -51,21 +58,22 @@ export async function updateProgram(formData: FormData) {
     .eq("id", id);
 
   if (error) {
-    return { error: error.message };
+    console.error("Update Program Error:", error);
+    throw new Error(error.message);
   }
 
   revalidatePath("/admin/programs");
-
-  return { success: true };
+  redirect("/admin/programs");
 }
 
-export async function deleteProgram(formData: FormData) {
+export async function deleteProgram(formData: FormData): Promise<void> {
   const supabase = await createClient();
 
-  const id = String(formData.get("id") ?? "");
+  const id = String(formData.get("id") ?? "").trim();
 
   if (!id) {
-    return { error: "Program ID is missing." };
+    console.error("Delete Program: Program ID is missing.");
+    return;
   }
 
   const { error } = await supabase
@@ -74,10 +82,10 @@ export async function deleteProgram(formData: FormData) {
     .eq("id", id);
 
   if (error) {
-    return { error: error.message };
+    console.error("Delete Program Error:", error);
+    throw new Error(error.message);
   }
 
   revalidatePath("/admin/programs");
-
-  return { success: true };
+  redirect("/admin/programs");
 }

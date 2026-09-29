@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 
-export async function createCourse(formData: FormData) {
+export async function createCourse(formData: FormData): Promise<void> {
   const supabase = await createClient();
 
   const title = String(formData.get("title") || "").trim();
@@ -13,7 +13,8 @@ export async function createCourse(formData: FormData) {
   const status = String(formData.get("status") || "draft").trim();
 
   if (!title || !slug) {
-    return { error: "Title and slug are required." };
+    console.error("Create Course: Title and slug are required.");
+    return;
   }
 
   const { error } = await supabase.from("courses").insert({
@@ -25,18 +26,17 @@ export async function createCourse(formData: FormData) {
   });
 
   if (error) {
-    return { error: error.message };
+    console.error("Create Course Error:", error);
+    throw new Error(error.message);
   }
 
   revalidatePath("/admin/courses");
-
-  return { success: true };
 }
 
-export async function updateCourse(formData: FormData) {
+export async function updateCourse(formData: FormData): Promise<void> {
   const supabase = await createClient();
 
-  const id = String(formData.get("id") || "");
+  const id = String(formData.get("id") || "").trim();
   const title = String(formData.get("title") || "").trim();
   const slug = String(formData.get("slug") || "").trim();
   const description = String(formData.get("description") || "").trim();
@@ -44,7 +44,10 @@ export async function updateCourse(formData: FormData) {
   const status = String(formData.get("status") || "draft").trim();
 
   if (!id || !title || !slug) {
-    return { error: "Course ID, title and slug are required." };
+    console.error(
+      "Update Course: Course ID, title and slug are required."
+    );
+    return;
   }
 
   const { error } = await supabase
@@ -60,21 +63,21 @@ export async function updateCourse(formData: FormData) {
     .eq("id", id);
 
   if (error) {
-    return { error: error.message };
+    console.error("Update Course Error:", error);
+    throw new Error(error.message);
   }
 
   revalidatePath("/admin/courses");
-
-  return { success: true };
 }
 
-export async function deleteCourse(formData: FormData) {
+export async function deleteCourse(formData: FormData): Promise<void> {
   const supabase = await createClient();
 
-  const id = String(formData.get("id") || "");
+  const id = String(formData.get("id") || "").trim();
 
   if (!id) {
-    return { error: "Course ID is required." };
+    console.error("Delete Course: Course ID is required.");
+    return;
   }
 
   const { error } = await supabase
@@ -83,10 +86,9 @@ export async function deleteCourse(formData: FormData) {
     .eq("id", id);
 
   if (error) {
-    return { error: error.message };
+    console.error("Delete Course Error:", error);
+    throw new Error(error.message);
   }
 
   revalidatePath("/admin/courses");
-
-  return { success: true };
 }

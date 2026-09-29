@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 
-export async function createModule(formData: FormData) {
+export async function createModule(formData: FormData): Promise<void> {
   const supabase = await createClient();
 
   const programId = String(formData.get("program_id") || "").trim();
@@ -13,21 +13,18 @@ export async function createModule(formData: FormData) {
   const status = String(formData.get("status") || "active").trim();
 
   if (!programId || !title) {
-    return {
-      error: "Program and module title are required.",
-    };
+    console.error("Create Module: Program and module title are required.");
+    return;
   }
 
   if (!Number.isInteger(moduleOrder) || moduleOrder < 1) {
-    return {
-      error: "Module order must be a positive number.",
-    };
+    console.error("Create Module: Module order must be a positive number.");
+    return;
   }
 
   if (!["active", "inactive"].includes(status)) {
-    return {
-      error: "Invalid module status.",
-    };
+    console.error("Create Module: Invalid module status.");
+    return;
   }
 
   const { error } = await supabase.from("modules").insert({
@@ -39,19 +36,14 @@ export async function createModule(formData: FormData) {
   });
 
   if (error) {
-    return {
-      error: error.message,
-    };
+    console.error("Create Module Error:", error);
+    throw new Error(error.message);
   }
 
   revalidatePath("/admin/modules");
-
-  return {
-    success: true,
-  };
 }
 
-export async function updateModule(formData: FormData) {
+export async function updateModule(formData: FormData): Promise<void> {
   const supabase = await createClient();
 
   const id = String(formData.get("id") || "").trim();
@@ -62,21 +54,22 @@ export async function updateModule(formData: FormData) {
   const status = String(formData.get("status") || "active").trim();
 
   if (!id || !programId || !title) {
-    return {
-      error: "Module ID, program and title are required.",
-    };
+    console.error(
+      "Update Module: Module ID, program and title are required."
+    );
+    return;
   }
 
   if (!Number.isInteger(moduleOrder) || moduleOrder < 1) {
-    return {
-      error: "Module order must be a positive number.",
-    };
+    console.error(
+      "Update Module: Module order must be a positive number."
+    );
+    return;
   }
 
   if (!["active", "inactive"].includes(status)) {
-    return {
-      error: "Invalid module status.",
-    };
+    console.error("Update Module: Invalid module status.");
+    return;
   }
 
   const { error } = await supabase
@@ -92,27 +85,21 @@ export async function updateModule(formData: FormData) {
     .eq("id", id);
 
   if (error) {
-    return {
-      error: error.message,
-    };
+    console.error("Update Module Error:", error);
+    throw new Error(error.message);
   }
 
   revalidatePath("/admin/modules");
-
-  return {
-    success: true,
-  };
 }
 
-export async function deleteModule(formData: FormData) {
+export async function deleteModule(formData: FormData): Promise<void> {
   const supabase = await createClient();
 
   const id = String(formData.get("id") || "").trim();
 
   if (!id) {
-    return {
-      error: "Module ID is required.",
-    };
+    console.error("Delete Module: Module ID is required.");
+    return;
   }
 
   const { error } = await supabase
@@ -121,14 +108,9 @@ export async function deleteModule(formData: FormData) {
     .eq("id", id);
 
   if (error) {
-    return {
-      error: error.message,
-    };
+    console.error("Delete Module Error:", error);
+    throw new Error(error.message);
   }
 
   revalidatePath("/admin/modules");
-
-  return {
-    success: true,
-  };
 }
