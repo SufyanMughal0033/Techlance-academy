@@ -11,9 +11,9 @@ export default async function StudentPortalLayout({
   return (
     <StudentShellClient
       user={{
-        name: profile.full_name || user.email || "Student",
+        name: profile.fullname || user.email || "Student",
         email: profile.email ?? user.email ?? "",
-        avatarUrl: profile.avatar_url,
+        avatarUrl: null,
       }}
     >
       {children}
