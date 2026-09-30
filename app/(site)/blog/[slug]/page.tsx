@@ -9,181 +9,72 @@ import {
   Sparkles,
 } from "lucide-react";
 import { notFound } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
 
-const posts = [
-  {
-    slug: "how-to-start-a-career-in-web-development",
-    category: "Career",
-    title: "How to Start a Career in Web Development",
-    excerpt:
-      "A practical roadmap for beginners who want to learn modern web development and build real-world skills.",
-    date: "September 24, 2026",
-    readTime: "6 min read",
-    author: "Techlance Academy",
-    gradient: "from-blue-500/20 via-primary/10 to-transparent",
-    sections: [
-      {
-        heading: "Start with the fundamentals",
-        paragraphs: [
-          "A strong web development journey starts with understanding the fundamentals rather than jumping between frameworks.",
-          "Begin with HTML, CSS, and JavaScript. These technologies form the foundation of almost every modern website and web application.",
-        ],
-      },
-      {
-        heading: "Move into modern development",
-        paragraphs: [
-          "Once your JavaScript fundamentals are comfortable, you can start learning a modern frontend framework such as React.",
-          "The goal should not simply be to memorize syntax. Focus on understanding components, state, events, routing, reusable UI, and how applications are structured.",
-        ],
-      },
-      {
-        heading: "Build real projects",
-        paragraphs: [
-          "Projects are where your learning becomes practical. Build websites that solve realistic problems instead of following tutorials forever.",
-          "A portfolio containing several polished projects can demonstrate your ability much more effectively than a long list of technologies.",
-        ],
-      },
-    ],
-  },
-  {
-    slug: "react-js-roadmap-for-beginners",
-    category: "Development",
-    title: "React.js Roadmap for Beginners",
-    excerpt:
-      "Understand what to learn, what to build, and how to move from JavaScript fundamentals to production-ready React apps.",
-    date: "September 20, 2026",
-    readTime: "8 min read",
-    author: "Techlance Academy",
-    gradient: "from-cyan-500/20 via-blue-500/10 to-transparent",
-    sections: [
-      {
-        heading: "JavaScript comes first",
-        paragraphs: [
-          "Before learning React, make sure you understand variables, arrays, objects, functions, loops, modules, promises, and modern JavaScript syntax.",
-        ],
-      },
-      {
-        heading: "Learn the React mental model",
-        paragraphs: [
-          "React is easier to understand when you think in reusable components and data flowing through your interface.",
-          "Focus on props, state, events, conditional rendering, lists, hooks, and component composition.",
-        ],
-      },
-      {
-        heading: "Build complete applications",
-        paragraphs: [
-          "After learning the fundamentals, build complete projects with routing, APIs, forms, responsive layouts, and proper deployment.",
-        ],
-      },
-    ],
-  },
-  {
-    slug: "why-digital-skills-matter-in-2026",
-    category: "Industry",
-    title: "Why Digital Skills Matter More Than Ever in 2026",
-    excerpt:
-      "Explore how technology is changing careers and why practical digital skills are becoming increasingly valuable.",
-    date: "September 16, 2026",
-    readTime: "5 min read",
-    author: "Techlance Academy",
-    gradient: "from-violet-500/20 via-purple-500/10 to-transparent",
-    sections: [
-      {
-        heading: "Technology is changing the workplace",
-        paragraphs: [
-          "Businesses across industries increasingly rely on websites, software, digital marketing, automation, and data-driven tools.",
-          "This creates demand for people who can understand and work with modern digital technologies.",
-        ],
-      },
-      {
-        heading: "Practical skills matter",
-        paragraphs: [
-          "Learning becomes valuable when it can be applied. Building projects, solving problems, and working with real tools helps turn theoretical knowledge into practical capability.",
-        ],
-      },
-    ],
-  },
-  {
-    slug: "building-your-first-professional-portfolio",
-    category: "Career",
-    title: "Building Your First Professional Portfolio",
-    excerpt:
-      "Learn how to turn your learning projects into a portfolio that clearly demonstrates your skills.",
-    date: "September 11, 2026",
-    readTime: "7 min read",
-    author: "Techlance Academy",
-    gradient: "from-emerald-500/20 via-teal-500/10 to-transparent",
-    sections: [
-      {
-        heading: "Quality over quantity",
-        paragraphs: [
-          "Your portfolio does not need dozens of projects. A few well-finished projects can communicate your skills more clearly.",
-        ],
-      },
-      {
-        heading: "Explain what you built",
-        paragraphs: [
-          "For every project, explain the problem, technologies used, important features, and what you learned while building it.",
-        ],
-      },
-    ],
-  },
-  {
-    slug: "frontend-development-skills-you-need",
-    category: "Development",
-    title: "Frontend Development Skills You Need",
-    excerpt:
-      "A breakdown of the core technologies and habits every aspiring frontend developer should develop.",
-    date: "September 7, 2026",
-    readTime: "6 min read",
-    author: "Techlance Academy",
-    gradient: "from-orange-500/20 via-amber-500/10 to-transparent",
-    sections: [
-      {
-        heading: "Master the foundation",
-        paragraphs: [
-          "HTML, CSS, and JavaScript remain essential frontend development skills even as frameworks continue to evolve.",
-        ],
-      },
-      {
-        heading: "Think beyond code",
-        paragraphs: [
-          "Responsive design, accessibility, performance, Git, debugging, and communication are also important parts of professional frontend development.",
-        ],
-      },
-    ],
-  },
-  {
-    slug: "from-learning-to-getting-your-first-client",
-    category: "Freelancing",
-    title: "From Learning to Getting Your First Client",
-    excerpt:
-      "A practical look at how beginners can turn their technical skills into real freelance opportunities.",
-    date: "September 2, 2026",
-    readTime: "9 min read",
-    author: "Techlance Academy",
-    gradient: "from-pink-500/20 via-rose-500/10 to-transparent",
-    sections: [
-      {
-        heading: "Build something you can show",
-        paragraphs: [
-          "Before approaching clients, make sure you have examples that demonstrate what you can actually deliver.",
-        ],
-      },
-      {
-        heading: "Focus on solving problems",
-        paragraphs: [
-          "Clients generally care about business outcomes rather than technology names. Learn to communicate how your service can solve a specific problem.",
-        ],
-      },
-    ],
-  },
-];
+export const revalidate = 60;
 
-export function generateStaticParams() {
-  return posts.map((post) => ({
-    slug: post.slug,
-  }));
+type BlogPost = {
+  id: string;
+  title: string;
+  slug: string;
+  excerpt: string | null;
+  content: string;
+  featured_image: string | null;
+  category: string | null;
+  tags: string[] | null;
+  seo_title: string | null;
+  seo_description: string | null;
+  status: string;
+  published_at: string | null;
+  created_at: string;
+};
+
+function getReadTime(content: string) {
+  const words = content.trim().split(/\s+/).filter(Boolean).length;
+  const minutes = Math.max(1, Math.ceil(words / 200));
+
+  return `${minutes} min read`;
+}
+
+function formatDate(date: string | null) {
+  if (!date) {
+    return "Recently";
+  }
+
+  return new Date(date).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+}
+
+function getGradient(category: string | null) {
+  const value = category?.toLowerCase() ?? "";
+
+  if (value.includes("career")) {
+    return "from-blue-500/20 via-primary/10 to-transparent";
+  }
+
+  if (value.includes("development")) {
+    return "from-cyan-500/20 via-blue-500/10 to-transparent";
+  }
+
+  if (value.includes("industry")) {
+    return "from-violet-500/20 via-purple-500/10 to-transparent";
+  }
+
+  if (value.includes("freelanc")) {
+    return "from-pink-500/20 via-rose-500/10 to-transparent";
+  }
+
+  return "from-blue-500/20 via-primary/10 to-transparent";
+}
+
+function getContentParagraphs(content: string) {
+  return content
+    .split(/\n\s*\n/)
+    .map((paragraph) => paragraph.trim())
+    .filter(Boolean);
 }
 
 export async function generateMetadata({
@@ -192,7 +83,17 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const post = posts.find((item) => item.slug === slug);
+
+  const supabase = await createClient();
+
+  const { data: post } = await supabase
+    .from("blog_posts")
+    .select(
+      "title, excerpt, seo_title, seo_description, status"
+    )
+    .eq("slug", slug)
+    .eq("status", "published")
+    .single();
 
   if (!post) {
     return {
@@ -201,8 +102,13 @@ export async function generateMetadata({
   }
 
   return {
-    title: `${post.title} | Techlance Academy`,
-    description: post.excerpt,
+    title:
+      post.seo_title ||
+      `${post.title} | Techlance Academy`,
+    description:
+      post.seo_description ||
+      post.excerpt ||
+      "Read the latest article from Techlance Academy.",
   };
 }
 
@@ -213,22 +119,58 @@ export default async function BlogPostPage({
 }) {
   const { slug } = await params;
 
-  const post = posts.find((item) => item.slug === slug);
+  const supabase = await createClient();
 
-  if (!post) {
+  const { data: post, error } = await supabase
+    .from("blog_posts")
+    .select(
+      "id, title, slug, excerpt, content, featured_image, category, tags, seo_title, seo_description, status, published_at, created_at"
+    )
+    .eq("slug", slug)
+    .eq("status", "published")
+    .single();
+
+  if (error || !post) {
     notFound();
   }
 
-  const relatedPosts = posts
-    .filter((item) => item.slug !== post.slug)
-    .filter((item) => item.category === post.category)
-    .slice(0, 3);
+  const blogPost = post as BlogPost;
+
+  const paragraphs = getContentParagraphs(blogPost.content);
+
+  const gradient = getGradient(blogPost.category);
+
+  /*
+   * Related posts
+   *
+   * Category is nullable in the database, so we only query
+   * related posts when the current post actually has a category.
+   */
+  let relatedPosts: BlogPost[] = [];
+
+  if (blogPost.category) {
+    const { data: relatedData } = await supabase
+      .from("blog_posts")
+      .select(
+        "id, title, slug, excerpt, content, featured_image, category, tags, published_at, created_at"
+      )
+      .eq("status", "published")
+      .neq("id", blogPost.id)
+      .eq("category", blogPost.category)
+      .order("published_at", {
+        ascending: false,
+        nullsFirst: false,
+      })
+      .limit(3);
+
+    relatedPosts = (relatedData ?? []) as BlogPost[];
+  }
 
   return (
     <main className="pb-20">
       {/* Article Hero */}
       <section
-        className={`relative overflow-hidden border-b border-border bg-gradient-to-br ${post.gradient}`}
+        className={`relative overflow-hidden border-b border-border bg-gradient-to-br ${gradient}`}
       >
         <div className="absolute inset-0 bg-grid-pattern opacity-[0.06]" />
 
@@ -244,29 +186,34 @@ export default async function BlogPostPage({
           <div className="mx-auto mt-12 max-w-4xl text-center">
             <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-background/70 px-4 py-2 text-xs font-semibold text-primary backdrop-blur">
               <Sparkles className="h-3.5 w-3.5" />
-              {post.category}
+
+              {blogPost.category ?? "Techlance Academy"}
             </div>
 
             <h1 className="mt-6 text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
-              {post.title}
+              {blogPost.title}
             </h1>
 
-            <p className="mx-auto mt-6 max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg">
-              {post.excerpt}
-            </p>
+            {blogPost.excerpt && (
+              <p className="mx-auto mt-6 max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg">
+                {blogPost.excerpt}
+              </p>
+            )}
 
             <div className="mt-8 flex flex-wrap items-center justify-center gap-5 text-sm text-muted-foreground">
               <span className="inline-flex items-center gap-2">
                 <CalendarDays className="h-4 w-4" />
-                {post.date}
+
+                {formatDate(blogPost.published_at)}
               </span>
 
               <span className="inline-flex items-center gap-2">
                 <Clock3 className="h-4 w-4" />
-                {post.readTime}
+
+                {getReadTime(blogPost.content)}
               </span>
 
-              <span>By {post.author}</span>
+              <span>By Techlance Academy</span>
             </div>
           </div>
         </div>
@@ -278,46 +225,46 @@ export default async function BlogPostPage({
           <article className="min-w-0">
             {/* Cover */}
             <div
-              className={`relative mb-12 aspect-[16/8] overflow-hidden rounded-3xl border border-border bg-gradient-to-br ${post.gradient}`}
+              className={`relative mb-12 aspect-[16/8] overflow-hidden rounded-3xl border border-border bg-gradient-to-br ${gradient}`}
             >
-              <div className="absolute inset-0 bg-grid-pattern opacity-[0.08]" />
+              {blogPost.featured_image ? (
+                <img
+                  src={blogPost.featured_image}
+                  alt={blogPost.title}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <>
+                  <div className="absolute inset-0 bg-grid-pattern opacity-[0.08]" />
 
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="text-center">
-                  <div className="text-6xl font-black tracking-tighter text-foreground/10 sm:text-8xl">
-                    TECHLANCE
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="text-center">
+                      <div className="text-5xl font-black tracking-tighter text-foreground/10 sm:text-8xl">
+                        TECHLANCE
+                      </div>
+
+                      <p className="mt-2 text-sm font-medium text-muted-foreground">
+                        Academy Insights
+                      </p>
+                    </div>
                   </div>
-                  <p className="mt-2 text-sm font-medium text-muted-foreground">
-                    Academy Insights
-                  </p>
-                </div>
-              </div>
+                </>
+              )}
             </div>
 
             {/* Content */}
             <div className="prose prose-neutral max-w-none dark:prose-invert">
-              <p className="text-lg leading-8 text-muted-foreground">
-                Building a successful career in technology requires more than
-                simply watching tutorials. The most valuable progress comes
-                from understanding fundamentals, practicing consistently, and
-                applying your knowledge to real problems.
-              </p>
-
-              {post.sections.map((section) => (
-                <section key={section.heading} className="mt-12">
-                  <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
-                    {section.heading}
-                  </h2>
-
-                  {section.paragraphs.map((paragraph) => (
-                    <p
-                      key={paragraph}
-                      className="mt-5 text-base leading-8 text-muted-foreground"
-                    >
-                      {paragraph}
-                    </p>
-                  ))}
-                </section>
+              {paragraphs.map((paragraph, index) => (
+                <p
+                  key={`${blogPost.id}-${index}`}
+                  className={
+                    index === 0
+                      ? "text-lg leading-8 text-muted-foreground"
+                      : "mt-6 text-base leading-8 text-muted-foreground"
+                  }
+                >
+                  {paragraph}
+                </p>
               ))}
 
               {/* Key takeaway */}
@@ -331,29 +278,42 @@ export default async function BlogPostPage({
                     </h3>
 
                     <p className="mt-2 text-sm leading-7 text-muted-foreground">
-                      Focus on building a strong foundation, practice through
-                      real projects, and continuously improve your ability to
-                      solve practical problems.
+                      Keep learning, practice through real projects,
+                      and focus on applying your knowledge to practical
+                      problems.
                     </p>
                   </div>
                 </div>
               </div>
 
-              <h2 className="mt-12 text-2xl font-bold tracking-tight sm:text-3xl">
-                Keep learning. Keep building.
-              </h2>
+              {/* Tags */}
+              {blogPost.tags && blogPost.tags.length > 0 && (
+                <div className="mt-10">
+                  <p className="text-sm font-semibold">
+                    Tags
+                  </p>
 
-              <p className="mt-5 text-base leading-8 text-muted-foreground">
-                Technology changes quickly, but the ability to learn, adapt,
-                and build remains valuable. Treat every project as an
-                opportunity to improve your skills and create something useful.
-              </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {blogPost.tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="rounded-full border border-border bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground"
+                      >
+                        #{tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Share */}
             <div className="mt-12 flex flex-wrap items-center justify-between gap-4 border-t border-border pt-6">
               <div>
-                <p className="text-sm font-semibold">Enjoyed this article?</p>
+                <p className="text-sm font-semibold">
+                  Enjoyed this article?
+                </p>
+
                 <p className="mt-1 text-xs text-muted-foreground">
                   Share it with someone who might find it useful.
                 </p>
@@ -373,21 +333,39 @@ export default async function BlogPostPage({
           <aside className="hidden lg:block">
             <div className="sticky top-24 rounded-2xl border border-border bg-card p-5">
               <p className="text-xs font-semibold uppercase tracking-[0.15em] text-primary">
-                In this article
+                Article
               </p>
 
-              <div className="mt-5 space-y-3">
-                {post.sections.map((section, index) => (
-                  <div
-                    key={section.heading}
-                    className="flex gap-3 text-sm text-muted-foreground"
-                  >
-                    <span className="font-semibold text-primary">
-                      0{index + 1}
-                    </span>
-                    <span>{section.heading}</span>
-                  </div>
-                ))}
+              <div className="mt-5 space-y-4">
+                <div>
+                  <p className="text-xs text-muted-foreground">
+                    Category
+                  </p>
+
+                  <p className="mt-1 text-sm font-medium">
+                    {blogPost.category ?? "Academy"}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-xs text-muted-foreground">
+                    Published
+                  </p>
+
+                  <p className="mt-1 text-sm font-medium">
+                    {formatDate(blogPost.published_at)}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-xs text-muted-foreground">
+                    Reading time
+                  </p>
+
+                  <p className="mt-1 text-sm font-medium">
+                    {getReadTime(blogPost.content)}
+                  </p>
+                </div>
               </div>
 
               <div className="my-6 border-t border-border" />
@@ -411,6 +389,7 @@ export default async function BlogPostPage({
             <p className="text-sm font-semibold text-primary">
               Keep reading
             </p>
+
             <h2 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">
               Related articles
             </h2>
@@ -419,12 +398,12 @@ export default async function BlogPostPage({
           <div className="grid gap-5 md:grid-cols-3">
             {relatedPosts.map((related) => (
               <Link
-                key={related.slug}
+                key={related.id}
                 href={`/blog/${related.slug}`}
                 className="group rounded-2xl border border-border bg-card p-5 transition hover:-translate-y-1 hover:border-primary/30"
               >
                 <span className="text-xs font-semibold text-primary">
-                  {related.category}
+                  {related.category ?? "Academy"}
                 </span>
 
                 <h3 className="mt-3 font-semibold leading-6 transition-colors group-hover:text-primary">
@@ -433,7 +412,8 @@ export default async function BlogPostPage({
 
                 <div className="mt-5 flex items-center gap-2 text-xs text-muted-foreground">
                   <Clock3 className="h-3.5 w-3.5" />
-                  {related.readTime}
+
+                  {getReadTime(related.content)}
                 </div>
               </Link>
             ))}
