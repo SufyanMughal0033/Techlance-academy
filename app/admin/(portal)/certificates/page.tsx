@@ -173,6 +173,7 @@ export default async function CertificatesPage() {
               <select
                 id="program_id"
                 name="program_id"
+                required
                 className="w-full rounded-lg border bg-background px-3 py-2 text-sm"
               >
                 <option value="">Select program</option>
@@ -186,7 +187,8 @@ export default async function CertificatesPage() {
             </div>
           </div>
 
-          <div className="grid gap-5 md:grid-cols-3">
+          {/* Issue Date + Status */}
+          <div className="grid gap-5 md:grid-cols-2">
             {/* Issue Date */}
             <div className="space-y-2">
               <label
@@ -204,23 +206,6 @@ export default async function CertificatesPage() {
                 defaultValue={new Date()
                   .toISOString()
                   .split("T")[0]}
-                className="w-full rounded-lg border bg-background px-3 py-2 text-sm"
-              />
-            </div>
-
-            {/* Expiry Date */}
-            <div className="space-y-2">
-              <label
-                htmlFor="expiry_date"
-                className="text-sm font-medium"
-              >
-                Expiry Date
-              </label>
-
-              <input
-                id="expiry_date"
-                name="expiry_date"
-                type="date"
                 className="w-full rounded-lg border bg-background px-3 py-2 text-sm"
               />
             </div>
@@ -265,20 +250,20 @@ export default async function CertificatesPage() {
             />
           </div>
 
-          {/* Notes */}
+          {/* Description */}
           <div className="space-y-2">
             <label
-              htmlFor="notes"
+              htmlFor="description"
               className="text-sm font-medium"
             >
-              Notes
+              Description
             </label>
 
             <textarea
-              id="notes"
-              name="notes"
+              id="description"
+              name="description"
               rows={4}
-              placeholder="Optional notes..."
+              placeholder="Optional certificate description..."
               className="w-full rounded-lg border bg-background px-3 py-2 text-sm"
             />
           </div>
@@ -315,13 +300,8 @@ export default async function CertificatesPage() {
         ) : (
           <div className="divide-y">
             {certificates.map((certificate) => {
-              const student = studentMap.get(
-                certificate.student_id
-              );
-
-              const program = certificate.program_id
-                ? programMap.get(certificate.program_id)
-                : null;
+              const student = studentMap.get(certificate.student_id);
+              const program = programMap.get(certificate.program_id);
 
               return (
                 <div
@@ -330,6 +310,7 @@ export default async function CertificatesPage() {
                 >
                   <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
                     <div className="min-w-0">
+                      {/* Certificate Header */}
                       <div className="flex flex-wrap items-center gap-2">
                         <h3 className="font-semibold">
                           {certificate.certificate_number}
@@ -348,10 +329,12 @@ export default async function CertificatesPage() {
                         </span>
                       </div>
 
+                      {/* Certificate Title */}
                       <p className="mt-2 text-sm font-medium">
                         {certificate.title}
                       </p>
 
+                      {/* Certificate Details */}
                       <div className="mt-3 grid gap-2 text-sm text-muted-foreground md:grid-cols-2">
                         <p>
                           <span className="font-medium text-foreground">
@@ -366,7 +349,7 @@ export default async function CertificatesPage() {
                           <span className="font-medium text-foreground">
                             Program:
                           </span>{" "}
-                          {program || "Not assigned"}
+                          {program || "Unknown program"}
                         </p>
 
                         <p>
@@ -375,29 +358,25 @@ export default async function CertificatesPage() {
                           </span>{" "}
                           {certificate.issue_date}
                         </p>
-
-                        <p>
-                          <span className="font-medium text-foreground">
-                            Expiry Date:
-                          </span>{" "}
-                          {certificate.expiry_date || "No expiry"}
-                        </p>
                       </div>
 
-                      {certificate.notes && (
+                      {/* Description */}
+                      {certificate.description && (
                         <p className="mt-3 text-sm text-muted-foreground">
                           <span className="font-medium text-foreground">
-                            Notes:
+                            Description:
                           </span>{" "}
-                          {certificate.notes}
+                          {certificate.description}
                         </p>
                       )}
 
+                      {/* Certificate URL */}
                       {certificate.certificate_url && (
                         <div className="mt-3">
                           <Link
                             href={certificate.certificate_url}
                             target="_blank"
+                            rel="noopener noreferrer"
                             className="text-sm font-medium text-primary hover:underline"
                           >
                             View Certificate
@@ -459,11 +438,15 @@ export default async function CertificatesPage() {
 
                             {/* Student */}
                             <div className="space-y-2">
-                              <label className="text-sm font-medium">
+                              <label
+                                htmlFor={`edit-student-${certificate.id}`}
+                                className="text-sm font-medium"
+                              >
                                 Student
                               </label>
 
                               <select
+                                id={`edit-student-${certificate.id}`}
                                 name="student_id"
                                 required
                                 defaultValue={certificate.student_id}
@@ -488,15 +471,18 @@ export default async function CertificatesPage() {
 
                             {/* Program */}
                             <div className="space-y-2">
-                              <label className="text-sm font-medium">
+                              <label
+                                htmlFor={`edit-program-${certificate.id}`}
+                                className="text-sm font-medium"
+                              >
                                 Program
                               </label>
 
                               <select
+                                id={`edit-program-${certificate.id}`}
                                 name="program_id"
-                                defaultValue={
-                                  certificate.program_id || ""
-                                }
+                                required
+                                defaultValue={certificate.program_id}
                                 className="w-full rounded-lg border bg-background px-3 py-2 text-sm"
                               >
                                 <option value="">
@@ -514,47 +500,38 @@ export default async function CertificatesPage() {
                               </select>
                             </div>
 
-                            <div className="grid gap-4 md:grid-cols-3">
+                            {/* Issue Date + Status */}
+                            <div className="grid gap-4 md:grid-cols-2">
                               {/* Issue Date */}
                               <div className="space-y-2">
-                                <label className="text-sm font-medium">
+                                <label
+                                  htmlFor={`edit-date-${certificate.id}`}
+                                  className="text-sm font-medium"
+                                >
                                   Issue Date
                                 </label>
 
                                 <input
+                                  id={`edit-date-${certificate.id}`}
                                   name="issue_date"
                                   type="date"
                                   required
-                                  defaultValue={
-                                    certificate.issue_date
-                                  }
-                                  className="w-full rounded-lg border bg-background px-3 py-2 text-sm"
-                                />
-                              </div>
-
-                              {/* Expiry Date */}
-                              <div className="space-y-2">
-                                <label className="text-sm font-medium">
-                                  Expiry Date
-                                </label>
-
-                                <input
-                                  name="expiry_date"
-                                  type="date"
-                                  defaultValue={
-                                    certificate.expiry_date || ""
-                                  }
+                                  defaultValue={certificate.issue_date}
                                   className="w-full rounded-lg border bg-background px-3 py-2 text-sm"
                                 />
                               </div>
 
                               {/* Status */}
                               <div className="space-y-2">
-                                <label className="text-sm font-medium">
+                                <label
+                                  htmlFor={`edit-status-${certificate.id}`}
+                                  className="text-sm font-medium"
+                                >
                                   Status
                                 </label>
 
                                 <select
+                                  id={`edit-status-${certificate.id}`}
                                   name="status"
                                   defaultValue={certificate.status}
                                   className="w-full rounded-lg border bg-background px-3 py-2 text-sm"
@@ -576,33 +553,42 @@ export default async function CertificatesPage() {
 
                             {/* Certificate URL */}
                             <div className="space-y-2">
-                              <label className="text-sm font-medium">
+                              <label
+                                htmlFor={`edit-url-${certificate.id}`}
+                                className="text-sm font-medium"
+                              >
                                 Certificate URL
                               </label>
 
                               <input
+                                id={`edit-url-${certificate.id}`}
                                 name="certificate_url"
                                 type="url"
                                 defaultValue={
-                                  certificate.certificate_url || ""
+                                  certificate.certificate_url ?? ""
                                 }
                                 placeholder="https://..."
                                 className="w-full rounded-lg border bg-background px-3 py-2 text-sm"
                               />
                             </div>
 
-                            {/* Notes */}
+                            {/* Description */}
                             <div className="space-y-2">
-                              <label className="text-sm font-medium">
-                                Notes
+                              <label
+                                htmlFor={`edit-description-${certificate.id}`}
+                                className="text-sm font-medium"
+                              >
+                                Description
                               </label>
 
                               <textarea
-                                name="notes"
+                                id={`edit-description-${certificate.id}`}
+                                name="description"
                                 rows={3}
                                 defaultValue={
-                                  certificate.notes || ""
+                                  certificate.description ?? ""
                                 }
+                                placeholder="Optional certificate description..."
                                 className="w-full rounded-lg border bg-background px-3 py-2 text-sm"
                               />
                             </div>
@@ -619,6 +605,7 @@ export default async function CertificatesPage() {
                         </div>
                       </details>
 
+                      {/* Delete */}
                       <form action={deleteCertificate}>
                         <input
                           type="hidden"

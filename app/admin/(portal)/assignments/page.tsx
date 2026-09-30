@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { createClient } from "@/lib/supabase/server";
 import {
   Card,
@@ -43,16 +45,19 @@ export default async function AssignmentsPage() {
   const totalAssignments = assignments?.length ?? 0;
 
   const publishedAssignments =
-    assignments?.filter((assignment) => assignment.status === "published")
-      .length ?? 0;
+    assignments?.filter(
+      (assignment) => assignment.status === "published"
+    ).length ?? 0;
 
   const draftAssignments =
-    assignments?.filter((assignment) => assignment.status === "draft").length ??
-    0;
+    assignments?.filter(
+      (assignment) => assignment.status === "draft"
+    ).length ?? 0;
 
   const closedAssignments =
-    assignments?.filter((assignment) => assignment.status === "closed").length ??
-    0;
+    assignments?.filter(
+      (assignment) => assignment.status === "closed"
+    ).length ?? 0;
 
   return (
     <div className="flex flex-col gap-6">
@@ -73,6 +78,7 @@ export default async function AssignmentsPage() {
             <p className="text-sm text-muted-foreground">
               Total Assignments
             </p>
+
             <p className="mt-2 text-2xl font-semibold">
               {totalAssignments}
             </p>
@@ -81,7 +87,10 @@ export default async function AssignmentsPage() {
 
         <Card>
           <CardContent className="p-5">
-            <p className="text-sm text-muted-foreground">Published</p>
+            <p className="text-sm text-muted-foreground">
+              Published
+            </p>
+
             <p className="mt-2 text-2xl font-semibold">
               {publishedAssignments}
             </p>
@@ -90,15 +99,25 @@ export default async function AssignmentsPage() {
 
         <Card>
           <CardContent className="p-5">
-            <p className="text-sm text-muted-foreground">Draft</p>
-            <p className="mt-2 text-2xl font-semibold">{draftAssignments}</p>
+            <p className="text-sm text-muted-foreground">
+              Draft
+            </p>
+
+            <p className="mt-2 text-2xl font-semibold">
+              {draftAssignments}
+            </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardContent className="p-5">
-            <p className="text-sm text-muted-foreground">Closed</p>
-            <p className="mt-2 text-2xl font-semibold">{closedAssignments}</p>
+            <p className="text-sm text-muted-foreground">
+              Closed
+            </p>
+
+            <p className="mt-2 text-2xl font-semibold">
+              {closedAssignments}
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -115,7 +134,9 @@ export default async function AssignmentsPage() {
             className="grid gap-4 md:grid-cols-2"
           >
             <div className="space-y-2">
-              <label className="text-sm font-medium">Module</label>
+              <label className="text-sm font-medium">
+                Module
+              </label>
 
               <select
                 name="module_id"
@@ -133,7 +154,9 @@ export default async function AssignmentsPage() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Assignment Title</label>
+              <label className="text-sm font-medium">
+                Assignment Title
+              </label>
 
               <Input
                 name="title"
@@ -143,7 +166,9 @@ export default async function AssignmentsPage() {
             </div>
 
             <div className="space-y-2 md:col-span-2">
-              <label className="text-sm font-medium">Description</label>
+              <label className="text-sm font-medium">
+                Description
+              </label>
 
               <textarea
                 name="description"
@@ -154,7 +179,9 @@ export default async function AssignmentsPage() {
             </div>
 
             <div className="space-y-2 md:col-span-2">
-              <label className="text-sm font-medium">Instructions</label>
+              <label className="text-sm font-medium">
+                Instructions
+              </label>
 
               <textarea
                 name="instructions"
@@ -165,7 +192,9 @@ export default async function AssignmentsPage() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Due Date</label>
+              <label className="text-sm font-medium">
+                Due Date
+              </label>
 
               <Input
                 name="due_date"
@@ -174,7 +203,9 @@ export default async function AssignmentsPage() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Max Marks</label>
+              <label className="text-sm font-medium">
+                Max Marks
+              </label>
 
               <Input
                 name="max_marks"
@@ -186,7 +217,9 @@ export default async function AssignmentsPage() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Attachment URL</label>
+              <label className="text-sm font-medium">
+                Attachment URL
+              </label>
 
               <Input
                 name="attachment_url"
@@ -196,7 +229,9 @@ export default async function AssignmentsPage() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Assignment Order</label>
+              <label className="text-sm font-medium">
+                Assignment Order
+              </label>
 
               <Input
                 name="assignment_order"
@@ -208,21 +243,33 @@ export default async function AssignmentsPage() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Status</label>
+              <label className="text-sm font-medium">
+                Status
+              </label>
 
               <select
                 name="status"
                 defaultValue="published"
                 className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
               >
-                <option value="published">Published</option>
-                <option value="draft">Draft</option>
-                <option value="closed">Closed</option>
+                <option value="published">
+                  Published
+                </option>
+
+                <option value="draft">
+                  Draft
+                </option>
+
+                <option value="closed">
+                  Closed
+                </option>
               </select>
             </div>
 
             <div className="md:col-span-2">
-              <Button type="submit">Create Assignment</Button>
+              <Button type="submit">
+                Create Assignment
+              </Button>
             </div>
           </form>
         </CardContent>
@@ -248,13 +295,33 @@ export default async function AssignmentsPage() {
               <table className="w-full min-w-[1000px] text-sm">
                 <thead>
                   <tr className="border-b text-left">
-                    <th className="px-4 py-3 font-medium">Title</th>
-                    <th className="px-4 py-3 font-medium">Module</th>
-                    <th className="px-4 py-3 font-medium">Marks</th>
-                    <th className="px-4 py-3 font-medium">Due Date</th>
-                    <th className="px-4 py-3 font-medium">Order</th>
-                    <th className="px-4 py-3 font-medium">Status</th>
-                    <th className="px-4 py-3 font-medium">Actions</th>
+                    <th className="px-4 py-3 font-medium">
+                      Title
+                    </th>
+
+                    <th className="px-4 py-3 font-medium">
+                      Module
+                    </th>
+
+                    <th className="px-4 py-3 font-medium">
+                      Marks
+                    </th>
+
+                    <th className="px-4 py-3 font-medium">
+                      Due Date
+                    </th>
+
+                    <th className="px-4 py-3 font-medium">
+                      Order
+                    </th>
+
+                    <th className="px-4 py-3 font-medium">
+                      Status
+                    </th>
+
+                    <th className="px-4 py-3 font-medium">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
 
@@ -269,8 +336,9 @@ export default async function AssignmentsPage() {
                       </td>
 
                       <td className="px-4 py-4 text-muted-foreground">
-                        {moduleMap.get(assignment.module_id) ??
-                          "Unknown Module"}
+                        {moduleMap.get(
+                          assignment.module_id
+                        ) ?? "Unknown Module"}
                       </td>
 
                       <td className="px-4 py-4">
@@ -337,18 +405,22 @@ export default async function AssignmentsPage() {
 
                                     <select
                                       name="module_id"
-                                      defaultValue={assignment.module_id}
+                                      defaultValue={
+                                        assignment.module_id
+                                      }
                                       required
                                       className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                                     >
-                                      {(modules ?? []).map((module) => (
-                                        <option
-                                          key={module.id}
-                                          value={module.id}
-                                        >
-                                          {module.title}
-                                        </option>
-                                      ))}
+                                      {(modules ?? []).map(
+                                        (module) => (
+                                          <option
+                                            key={module.id}
+                                            value={module.id}
+                                          >
+                                            {module.title}
+                                          </option>
+                                        )
+                                      )}
                                     </select>
                                   </div>
 
@@ -359,7 +431,9 @@ export default async function AssignmentsPage() {
 
                                     <Input
                                       name="title"
-                                      defaultValue={assignment.title}
+                                      defaultValue={
+                                        assignment.title
+                                      }
                                       required
                                     />
                                   </div>
@@ -372,7 +446,8 @@ export default async function AssignmentsPage() {
                                     <textarea
                                       name="description"
                                       defaultValue={
-                                        assignment.description ?? ""
+                                        assignment.description ??
+                                        ""
                                       }
                                       rows={3}
                                       className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -387,7 +462,8 @@ export default async function AssignmentsPage() {
                                     <textarea
                                       name="instructions"
                                       defaultValue={
-                                        assignment.instructions ?? ""
+                                        assignment.instructions ??
+                                        ""
                                       }
                                       rows={5}
                                       className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -423,7 +499,9 @@ export default async function AssignmentsPage() {
                                       name="max_marks"
                                       type="number"
                                       min="1"
-                                      defaultValue={assignment.max_marks}
+                                      defaultValue={
+                                        assignment.max_marks
+                                      }
                                       required
                                     />
                                   </div>
@@ -437,7 +515,8 @@ export default async function AssignmentsPage() {
                                       name="attachment_url"
                                       type="url"
                                       defaultValue={
-                                        assignment.attachment_url ?? ""
+                                        assignment.attachment_url ??
+                                        ""
                                       }
                                     />
                                   </div>
@@ -465,14 +544,22 @@ export default async function AssignmentsPage() {
 
                                     <select
                                       name="status"
-                                      defaultValue={assignment.status}
+                                      defaultValue={
+                                        assignment.status
+                                      }
                                       className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                                     >
                                       <option value="published">
                                         Published
                                       </option>
-                                      <option value="draft">Draft</option>
-                                      <option value="closed">Closed</option>
+
+                                      <option value="draft">
+                                        Draft
+                                      </option>
+
+                                      <option value="closed">
+                                        Closed
+                                      </option>
                                     </select>
                                   </div>
 
@@ -481,15 +568,12 @@ export default async function AssignmentsPage() {
                                       Save Changes
                                     </Button>
 
-                                    <Button
-                                      type="button"
-                                      variant="outline"
-                                      onClick={() =>
-                                        window.history.back()
-                                      }
+                                    <Link
+                                      href="/admin/assignments"
+                                      className="inline-flex h-10 items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-muted"
                                     >
                                       Cancel
-                                    </Button>
+                                    </Link>
                                   </div>
                                 </form>
                               </div>

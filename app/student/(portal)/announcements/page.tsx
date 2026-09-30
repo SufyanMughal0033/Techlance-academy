@@ -14,21 +14,24 @@ import { createClient } from "@/lib/supabase/server";
 
 export const metadata = {
   title: "Announcements",
-  description: "View the latest announcements and updates from Techlance Academy.",
+  description:
+    "View the latest announcements and updates from Techlance Academy.",
 };
 
 type Announcement = {
   id: string;
   title: string;
-  content: string;
+  message: string;
   announcement_type:
     | "general"
     | "class"
     | "assignment"
     | "test"
+    | "exam"
     | "important";
-  published_at: string;
-  target_program_id: string | null;
+  target_type: "all" | "program";
+  program_id: string | null;
+  published_at: string | null;
 };
 
 function getAnnouncementIcon(type: Announcement["announcement_type"]) {
@@ -61,6 +64,9 @@ function getTypeLabel(type: Announcement["announcement_type"]) {
     case "test":
       return "Test";
 
+    case "exam":
+      return "Exam";
+
     case "important":
       return "Important";
 
@@ -75,6 +81,7 @@ function getTypeClasses(type: Announcement["announcement_type"]) {
       return "bg-red-500/10 text-red-700 dark:text-red-400";
 
     case "test":
+    case "exam":
       return "bg-purple-500/10 text-purple-700 dark:text-purple-400";
 
     case "assignment":
@@ -88,7 +95,11 @@ function getTypeClasses(type: Announcement["announcement_type"]) {
   }
 }
 
-function formatDate(date: string) {
+function formatDate(date: string | null) {
+  if (!date) {
+    return "Published";
+  }
+
   return new Intl.DateTimeFormat("en-US", {
     day: "numeric",
     month: "short",
@@ -102,20 +113,56 @@ export default async function AnnouncementsPage() {
   const { user } = await requireRole("student");
   const supabase = await createClient();
 
+  /*
+   * Get the student's enrolled programs.
+   *
+   * This allows program-specific announcements to be shown
+   * only to students enrolled in that program.
+   */
+  const { data: enrollments, error: enrollmentsError } =
+    await supabase
+      .from("enrollments")
+      .select("program_id")
+      .eq("student_id", user.id);
+
+  if (enrollmentsError) {
+    console.error(
+      "Student enrollments fetch failed:",
+      enrollmentsError.message
+    );
+  }
+
+  const enrolledProgramIds = (enrollments ?? [])
+    .map((enrollment) => enrollment.program_id)
+    .filter(Boolean);
+
+  /*
+   * Fetch published announcements.
+   *
+   * We fetch:
+   * 1. Announcements for everyone
+   * 2. Announcements for programs the student is enrolled in
+   */
   const { data, error } = await supabase
     .from("announcements")
     .select(`
       id,
       title,
-      content,
+      message,
       announcement_type,
-      published_at,
-      target_program_id
+      target_type,
+      program_id,
+      published_at
     `)
-    .eq("is_published", true)
-    .order("published_at", { ascending: false });
+    .eq("status", "published")
+    .order("created_at", { ascending: false });
 
   if (error) {
+    console.error(
+      "Announcements fetch failed:",
+      error.message
+    );
+
     return (
       <div className="flex flex-col gap-6">
         <div>
@@ -145,7 +192,31 @@ export default async function AnnouncementsPage() {
     );
   }
 
-  const announcements = (data ?? []) as Announcement[];
+  /*
+   * Security/UI filtering:
+   *
+   * All students can see target_type = "all".
+   * Program-specific announcements are shown only when
+   * the student is enrolled in that program.
+   */
+  const announcements = ((data ?? []) as Announcement[]).filter(
+    (announcement) => {
+      if (announcement.target_type === "all") {
+        return true;
+      }
+
+      if (
+        announcement.target_type === "program" &&
+        announcement.program_id
+      ) {
+        return enrolledProgramIds.includes(
+          announcement.program_id
+        );
+      }
+
+      return false;
+    }
+  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -166,8 +237,8 @@ export default async function AnnouncementsPage() {
         </div>
 
         <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-          Stay updated with the latest news, class updates, tests,
-          assignments, and important academy notices.
+          Stay updated with the latest news, class updates,
+          tests, assignments, and important academy notices.
         </p>
       </div>
 
@@ -182,7 +253,8 @@ export default async function AnnouncementsPage() {
             </p>
 
             <p className="mt-1 max-w-md text-sm text-muted-foreground">
-              New academy announcements and updates will appear here.
+              New academy announcements and updates will
+              appear here.
             </p>
           </CardContent>
         </Card>
@@ -224,16 +296,18 @@ export default async function AnnouncementsPage() {
                           </div>
 
                           <p className="mt-1 text-xs text-muted-foreground">
-                            {formatDate(announcement.published_at)}
+                            {formatDate(
+                              announcement.published_at
+                            )}
                           </p>
                         </div>
                       </div>
 
                       <div className="mt-4 whitespace-pre-line text-sm leading-7 text-muted-foreground">
-                        {announcement.content}
+                        {announcement.message}
                       </div>
 
-                      {announcement.target_program_id && (
+                      {announcement.target_type === "program" && (
                         <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
                           <BookOpen className="h-3.5 w-3.5" />
                           Program-specific announcement

@@ -1,8 +1,13 @@
 import "server-only";
+
 import { redirect } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/server";
-import type { UserRole } from "@/types/database.types";
+
+export type UserRole =
+  | "admin"
+  | "student"
+  | "instructor";
 
 const LOGIN_PATH: Record<UserRole, string> = {
   admin: "/admin/login",
@@ -11,11 +16,9 @@ const LOGIN_PATH: Record<UserRole, string> = {
 };
 
 /**
- * Server-side authorization check: confirms there's a signed-in Supabase
- * user AND that their `profiles.role` matches what this portal requires,
- * redirecting otherwise. This is deliberately not just a client-side
- * check — it runs in the (portal) layout Server Component, before any
- * dashboard data is fetched or rendered.
+ * Server-side authorization check:
+ * confirms there's a signed-in Supabase user AND that their
+ * profiles.role matches the required portal role.
  */
 export async function requireRole(role: UserRole) {
   const supabase = await createClient();
@@ -34,9 +37,16 @@ export async function requireRole(role: UserRole) {
     .eq("id", user.id)
     .single();
 
-  if (!profile || profile.role !== role || !profile.is_active) {
+  if (
+    !profile ||
+    profile.role !== role ||
+    !profile.is_active
+  ) {
     redirect(LOGIN_PATH[role]);
   }
 
-  return { user, profile };
+  return {
+    user,
+    profile,
+  };
 }

@@ -4,7 +4,6 @@ import {
   ArrowRight,
   BookOpen,
   CheckCircle2,
-  Clock3,
   GraduationCap,
   Sparkles,
 } from "lucide-react";
@@ -17,16 +16,10 @@ export const revalidate = 60;
 type Program = {
   id: string;
   slug: string;
-  name: string;
-  description?: string | null;
-  short_description?: string | null;
-  category?: string | null;
-  level?: string | null;
-  duration?: string | null;
-  price?: number | null;
-  image_url?: string | null;
-  featured?: boolean | null;
-  status?: string | null;
+  title: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
 };
 
 export default async function ProgramDetailPage({
@@ -84,9 +77,7 @@ export default async function ProgramDetailPage({
 
   const typedProgram = program as Program;
 
-  // Treat missing status as active, and allow active/published programs.
   const isActive =
-    !typedProgram.status ||
     typedProgram.status === "active" ||
     typedProgram.status === "published";
 
@@ -128,17 +119,12 @@ export default async function ProgramDetailPage({
     );
   }
 
-  const description =
-    typedProgram.description ||
-    typedProgram.short_description ||
-    "Build practical digital skills through structured learning, hands-on practice, and instructor guidance.";
-
   return (
     <>
       <PageHero
-        eyebrow={typedProgram.category || "Techlance Academy"}
-        title={typedProgram.name}
-        description={description}
+        eyebrow="Techlance Academy"
+        title={typedProgram.title}
+        description={`Learn ${typedProgram.title} through structured lessons, practical learning, and hands-on experience at Techlance Academy.`}
       />
 
       <section className="py-14 sm:py-20">
@@ -146,34 +132,20 @@ export default async function ProgramDetailPage({
           <div className="grid gap-8 lg:grid-cols-[1.4fr_0.6fr]">
             {/* Main Content */}
             <div>
-              {typedProgram.image_url ? (
-                <div className="overflow-hidden rounded-3xl border border-border bg-muted">
-                  <img
-                    src={typedProgram.image_url}
-                    alt={typedProgram.name}
-                    className="aspect-[16/8] w-full object-cover"
-                  />
-                </div>
-              ) : (
-                <div className="flex aspect-[16/8] items-center justify-center overflow-hidden rounded-3xl border border-border bg-gradient-to-br from-primary/15 via-muted to-primary/5">
-                  <BookOpen className="h-20 w-20 text-primary/25" />
-                </div>
-              )}
+              <div className="flex aspect-[16/8] items-center justify-center overflow-hidden rounded-3xl border border-border bg-gradient-to-br from-primary/15 via-muted to-primary/5">
+                <BookOpen className="h-20 w-20 text-primary/25" />
+              </div>
 
               <div className="mt-8">
                 <div className="flex flex-wrap gap-2">
-                  {typedProgram.featured && (
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary">
-                      <Sparkles className="h-3.5 w-3.5" />
-                      Featured Program
-                    </span>
-                  )}
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary">
+                    <Sparkles className="h-3.5 w-3.5" />
+                    Techlance Academy
+                  </span>
 
-                  {typedProgram.category && (
-                    <span className="rounded-full bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground">
-                      {typedProgram.category}
-                    </span>
-                  )}
+                  <span className="rounded-full bg-muted px-3 py-1.5 text-xs font-medium capitalize text-muted-foreground">
+                    {typedProgram.status}
+                  </span>
                 </div>
 
                 <h2 className="mt-5 text-2xl font-bold tracking-tight sm:text-3xl">
@@ -181,7 +153,9 @@ export default async function ProgramDetailPage({
                 </h2>
 
                 <p className="mt-4 text-sm leading-7 text-muted-foreground sm:text-base">
-                  {description}
+                  {typedProgram.title} is designed to provide structured,
+                  practical learning with a focus on real-world skills and
+                  hands-on experience.
                 </p>
               </div>
 
@@ -288,74 +262,50 @@ export default async function ProgramDetailPage({
                   </p>
 
                   <h3 className="mt-3 text-2xl font-bold">
-                    {typedProgram.name}
+                    {typedProgram.title}
                   </h3>
                 </div>
 
                 <div className="space-y-5 p-6">
-                  {typedProgram.duration && (
-                    <div className="flex items-start gap-3">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10">
-                        <Clock3 className="h-5 w-5 text-primary" />
-                      </div>
-
-                      <div>
-                        <p className="text-xs text-muted-foreground">
-                          Duration
-                        </p>
-
-                        <p className="mt-1 text-sm font-semibold">
-                          {typedProgram.duration}
-                        </p>
-                      </div>
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                      <BookOpen className="h-5 w-5 text-primary" />
                     </div>
-                  )}
 
-                  {typedProgram.level && (
-                    <div className="flex items-start gap-3">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10">
-                        <GraduationCap className="h-5 w-5 text-primary" />
-                      </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">
+                        Program
+                      </p>
 
-                      <div>
-                        <p className="text-xs text-muted-foreground">
-                          Level
-                        </p>
-
-                        <p className="mt-1 text-sm font-semibold">
-                          {typedProgram.level}
-                        </p>
-                      </div>
+                      <p className="mt-1 text-sm font-semibold">
+                        {typedProgram.title}
+                      </p>
                     </div>
-                  )}
+                  </div>
 
-                  {typedProgram.category && (
-                    <div className="flex items-start gap-3">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10">
-                        <BookOpen className="h-5 w-5 text-primary" />
-                      </div>
-
-                      <div>
-                        <p className="text-xs text-muted-foreground">
-                          Category
-                        </p>
-
-                        <p className="mt-1 text-sm font-semibold">
-                          {typedProgram.category}
-                        </p>
-                      </div>
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                      <GraduationCap className="h-5 w-5 text-primary" />
                     </div>
-                  )}
+
+                    <div>
+                      <p className="text-xs text-muted-foreground">
+                        Status
+                      </p>
+
+                      <p className="mt-1 text-sm font-semibold capitalize">
+                        {typedProgram.status}
+                      </p>
+                    </div>
+                  </div>
 
                   <div className="border-t border-border pt-5">
                     <p className="text-xs text-muted-foreground">
-                      Program Fee
+                      Program
                     </p>
 
-                    <p className="mt-1 text-3xl font-bold tracking-tight">
-                      {typeof typedProgram.price === "number"
-                        ? `PKR ${typedProgram.price.toLocaleString()}`
-                        : "Contact for fee"}
+                    <p className="mt-1 text-2xl font-bold tracking-tight">
+                      {typedProgram.title}
                     </p>
                   </div>
 

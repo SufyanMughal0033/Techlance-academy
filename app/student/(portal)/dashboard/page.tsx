@@ -21,7 +21,12 @@ import {
   User,
 } from "lucide-react";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
 export const metadata = {
@@ -34,7 +39,7 @@ type UpcomingClass = {
   class_date: string | null;
   start_time: string | null;
   end_time: string | null;
-  status: "scheduled" | "live" | "completed" | "cancelled";
+  status: string;
   moduleTitle: string;
 };
 
@@ -42,7 +47,16 @@ type Announcement = {
   id: string;
   title: string;
   announcement_type: string;
-  published_at: string;
+  published_at: string | null;
+};
+
+type AnnouncementRecord = {
+  id: string;
+  title: string;
+  announcement_type: string;
+  published_at: string | null;
+  target_type: string;
+  program_id: string | null;
 };
 
 export default async function Page() {
@@ -50,7 +64,9 @@ export default async function Page() {
   const supabase = await createClient();
 
   const studentName =
-    profile.fullname?.trim() || user.email?.split("@")[0] || "Student";
+    profile.fullname?.trim() ||
+    user.email?.split("@")[0] ||
+    "Student";
 
   /*
    * ---------------------------------------------------------
@@ -84,6 +100,7 @@ export default async function Page() {
   const primaryEnrollment = activeEnrollments[0];
 
   const primaryProgramData = primaryEnrollment?.program;
+
   const primaryProgram = Array.isArray(primaryProgramData)
     ? primaryProgramData[0]
     : primaryProgramData;
@@ -98,14 +115,19 @@ export default async function Page() {
     programIds.length > 0
       ? await supabase
           .from("modules")
-          .select("id, program_id, title, module_order, status")
+          .select(
+            "id, program_id, title, module_order, status"
+          )
           .in("program_id", programIds)
           .eq("status", "active")
           .order("module_order", { ascending: true })
       : { data: [] };
 
   const activeModules = modules ?? [];
-  const moduleIds = activeModules.map((module) => module.id);
+
+  const moduleIds = activeModules.map(
+    (module) => module.id
+  );
 
   /*
    * ---------------------------------------------------------
@@ -229,10 +251,14 @@ export default async function Page() {
         title,
         announcement_type,
         published_at,
-        target_program_id
+        target_type,
+        program_id
       `)
-      .eq("is_published", true)
-      .order("published_at", { ascending: false })
+      .eq("status", "published")
+      .order("published_at", {
+        ascending: false,
+        nullsFirst: false,
+      })
       .limit(5),
 
     supabase
@@ -255,7 +281,10 @@ export default async function Page() {
   const attempts = attemptsResult.data ?? [];
   const attendance = attendanceResult.data ?? [];
   const certificates = certificatesResult.data ?? [];
-  const allAnnouncements = announcementsResult.data ?? [];
+
+  const allAnnouncements =
+    (announcementsResult.data ?? []) as AnnouncementRecord[];
+
   const supportTickets = ticketsResult.data ?? [];
 
   /*
@@ -291,10 +320,12 @@ export default async function Page() {
       .map((submission) => submission.assignment_id)
   );
 
-  const completedAssignments = submittedAssignmentIds.size;
+  const completedAssignments =
+    submittedAssignmentIds.size;
 
   const pendingAssignments = assignments.filter(
-    (assignment) => !submittedAssignmentIds.has(assignment.id)
+    (assignment) =>
+      !submittedAssignmentIds.has(assignment.id)
   );
 
   /*
@@ -303,7 +334,9 @@ export default async function Page() {
    * ---------------------------------------------------------
    */
 
-  const completedTestIds = new Set(attempts.map((attempt) => attempt.test_id));
+  const completedTestIds = new Set(
+    attempts.map((attempt) => attempt.test_id)
+  );
 
   const passedTests = attempts.filter(
     (attempt) => attempt.status === "passed"
@@ -339,20 +372,15 @@ export default async function Page() {
   const attendancePercentage =
     attendanceMarked > 0
       ? Math.round(
-          ((presentCount + lateCount) / attendanceMarked) * 100
+          ((presentCount + lateCount) /
+            attendanceMarked) *
+            100
         )
       : 0;
 
   /*
    * ---------------------------------------------------------
    * 8. OVERALL LEARNING PROGRESS
-   *
-   * Uses:
-   * - Completed classes
-   * - Assignments submitted
-   * - Tests completed
-   *
-   * If no LMS activity exists yet, progress starts at 0%.
    * ---------------------------------------------------------
    */
 
@@ -373,14 +401,19 @@ export default async function Page() {
 
   const progressParts = [
     ...(totalClasses > 0 ? [classProgress] : []),
-    ...(assignments.length > 0 ? [assignmentProgress] : []),
+    ...(assignments.length > 0
+      ? [assignmentProgress]
+      : []),
     ...(tests.length > 0 ? [testProgress] : []),
   ];
 
   const overallProgress =
     progressParts.length > 0
       ? Math.round(
-          (progressParts.reduce((sum, value) => sum + value, 0) /
+          (progressParts.reduce(
+            (sum, value) => sum + value,
+            0
+          ) /
             progressParts.length) *
             100
         )
@@ -395,14 +428,23 @@ export default async function Page() {
   const now = new Date();
 
   const moduleMap = new Map(
-    activeModules.map((module) => [module.id, module.title])
+    activeModules.map((module) => [
+      module.id,
+      module.title,
+    ])
   );
 
   const upcomingClasses: UpcomingClass[] = classes
     .filter((classItem) => {
       if (!classItem.class_date) return false;
-      if (classItem.status === "completed") return false;
-      if (classItem.status === "cancelled") return false;
+
+      if (classItem.status === "completed") {
+        return false;
+      }
+
+      if (classItem.status === "cancelled") {
+        return false;
+      }
 
       const dateTimeString = classItem.start_time
         ? `${classItem.class_date}T${classItem.start_time}`
@@ -419,7 +461,8 @@ export default async function Page() {
       end_time: classItem.end_time,
       status: classItem.status,
       moduleTitle:
-        moduleMap.get(classItem.module_id) || "Module",
+        moduleMap.get(classItem.module_id) ||
+        "Module",
     }));
 
   /*
@@ -428,19 +471,32 @@ export default async function Page() {
    * ---------------------------------------------------------
    */
 
-  const announcements: Announcement[] = allAnnouncements
-    .filter(
-      (announcement) =>
-        announcement.target_program_id === null ||
-        programIds.includes(announcement.target_program_id)
-    )
-    .slice(0, 3)
-    .map((announcement) => ({
-      id: announcement.id,
-      title: announcement.title,
-      announcement_type: announcement.announcement_type,
-      published_at: announcement.published_at,
-    }));
+  const announcements: Announcement[] =
+    allAnnouncements
+      .filter((announcement) => {
+        if (announcement.target_type === "all") {
+          return true;
+        }
+
+        if (
+          announcement.target_type === "program" &&
+          announcement.program_id
+        ) {
+          return programIds.includes(
+            announcement.program_id
+          );
+        }
+
+        return false;
+      })
+      .slice(0, 3)
+      .map((announcement) => ({
+        id: announcement.id,
+        title: announcement.title,
+        announcement_type:
+          announcement.announcement_type,
+        published_at: announcement.published_at,
+      }));
 
   /*
    * ---------------------------------------------------------
@@ -473,10 +529,18 @@ export default async function Page() {
   function formatTime(time: string | null) {
     if (!time) return "";
 
-    const [hours, minutes] = time.split(":").map(Number);
+    const [hours, minutes] = time
+      .split(":")
+      .map(Number);
 
     const date = new Date();
-    date.setHours(hours, minutes, 0, 0);
+
+    date.setHours(
+      hours,
+      minutes,
+      0,
+      0
+    );
 
     return new Intl.DateTimeFormat("en-US", {
       hour: "numeric",
@@ -488,12 +552,16 @@ export default async function Page() {
     switch (type) {
       case "important":
         return "Important";
+
       case "class":
         return "Class";
+
       case "assignment":
         return "Assignment";
+
       case "test":
         return "Test";
+
       default:
         return "General";
     }
@@ -512,8 +580,9 @@ export default async function Page() {
         </h2>
 
         <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-          Here&apos;s your live learning overview. Your academic
-          progress, classes, assignments and account activity are
+          Here&apos;s your live learning overview.
+          Your academic progress, classes,
+          assignments and account activity are
           connected to Techlance Academy.
         </p>
       </div>
@@ -521,7 +590,9 @@ export default async function Page() {
       {/* Quick Stats */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <InfoCard
-          icon={<GraduationCap className="h-5 w-5" />}
+          icon={
+            <GraduationCap className="h-5 w-5" />
+          }
           label="Program"
           value={
             primaryProgram?.title ||
@@ -543,9 +614,15 @@ export default async function Page() {
         />
 
         <InfoCard
-          icon={<ShieldCheck className="h-5 w-5" />}
+          icon={
+            <ShieldCheck className="h-5 w-5" />
+          }
           label="Account"
-          value={profile.is_active ? "Active" : "Inactive"}
+          value={
+            profile.is_active
+              ? "Active"
+              : "Inactive"
+          }
         />
       </div>
 
@@ -654,13 +731,17 @@ export default async function Page() {
       {/* Activity Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <MiniStatCard
-          icon={<CalendarDays className="h-5 w-5" />}
+          icon={
+            <CalendarDays className="h-5 w-5" />
+          }
           label="Upcoming Classes"
           value={upcomingClasses.length}
         />
 
         <MiniStatCard
-          icon={<ClipboardCheck className="h-5 w-5" />}
+          icon={
+            <ClipboardCheck className="h-5 w-5" />
+          }
           label="Pending Assignments"
           value={pendingAssignments.length}
         />
@@ -672,7 +753,9 @@ export default async function Page() {
         />
 
         <MiniStatCard
-          icon={<MessageCircle className="h-5 w-5" />}
+          icon={
+            <MessageCircle className="h-5 w-5" />
+          }
           label="Open Support"
           value={openSupportTickets}
         />
@@ -691,59 +774,74 @@ export default async function Page() {
           <CardContent>
             {upcomingClasses.length === 0 ? (
               <EmptyState
-                icon={<CalendarDays className="h-8 w-8" />}
+                icon={
+                  <CalendarDays className="h-8 w-8" />
+                }
                 title="No upcoming classes"
                 description="Your scheduled classes will appear here."
               />
             ) : (
               <div className="flex flex-col gap-3">
-                {upcomingClasses.map((classItem) => (
-                  <div
-                    key={classItem.id}
-                    className="rounded-xl border border-border p-4"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-foreground">
-                          {classItem.title}
-                        </p>
+                {upcomingClasses.map(
+                  (classItem) => (
+                    <div
+                      key={classItem.id}
+                      className="rounded-xl border border-border p-4"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-foreground">
+                            {classItem.title}
+                          </p>
 
-                        <p className="mt-1 text-xs text-primary">
-                          {classItem.moduleTitle}
-                        </p>
+                          <p className="mt-1 text-xs text-primary">
+                            {classItem.moduleTitle}
+                          </p>
+                        </div>
+
+                        <Badge
+                          variant={
+                            classItem.status ===
+                            "live"
+                              ? "default"
+                              : "secondary"
+                          }
+                        >
+                          {classItem.status ===
+                          "live"
+                            ? "Live"
+                            : "Scheduled"}
+                        </Badge>
                       </div>
 
-                      <Badge
-                        variant={
-                          classItem.status === "live"
-                            ? "default"
-                            : "secondary"
-                        }
-                      >
-                        {classItem.status === "live"
-                          ? "Live"
-                          : "Scheduled"}
-                      </Badge>
-                    </div>
-
-                    <div className="mt-3 flex flex-wrap gap-3 text-xs text-muted-foreground">
-                      <span className="inline-flex items-center gap-1.5">
-                        <CalendarDays className="h-3.5 w-3.5" />
-                        {formatDate(classItem.class_date)}
-                      </span>
-
-                      {classItem.start_time && (
+                      <div className="mt-3 flex flex-wrap gap-3 text-xs text-muted-foreground">
                         <span className="inline-flex items-center gap-1.5">
-                          <Clock3 className="h-3.5 w-3.5" />
-                          {formatTime(classItem.start_time)}
-                          {classItem.end_time
-                            ? ` - ${formatTime(classItem.end_time)}`
-                            : ""}
+                          <CalendarDays className="h-3.5 w-3.5" />
+
+                          {formatDate(
+                            classItem.class_date
+                          )}
                         </span>
-                      )}
+
+                        {classItem.start_time && (
+                          <span className="inline-flex items-center gap-1.5">
+                            <Clock3 className="h-3.5 w-3.5" />
+
+                            {formatTime(
+                              classItem.start_time
+                            )}
+
+                            {classItem.end_time
+                              ? ` - ${formatTime(
+                                  classItem.end_time
+                                )}`
+                              : ""}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  )
+                )}
               </div>
             )}
           </CardContent>
@@ -760,7 +858,9 @@ export default async function Page() {
           <CardContent>
             {pendingAssignments.length === 0 ? (
               <EmptyState
-                icon={<CheckCircle2 className="h-8 w-8" />}
+                icon={
+                  <CheckCircle2 className="h-8 w-8" />
+                }
                 title="All caught up"
                 description="You have no pending assignments."
               />
@@ -780,8 +880,9 @@ export default async function Page() {
                           </p>
 
                           <p className="mt-1 text-xs text-muted-foreground">
-                            {moduleMap.get(assignment.module_id) ||
-                              "Module"}
+                            {moduleMap.get(
+                              assignment.module_id
+                            ) || "Module"}
                           </p>
                         </div>
 
@@ -795,7 +896,9 @@ export default async function Page() {
 
                         Due{" "}
                         {assignment.due_date
-                          ? formatDate(assignment.due_date)
+                          ? formatDate(
+                              assignment.due_date
+                            )
                           : "No due date"}
                       </div>
                     </div>
@@ -868,40 +971,47 @@ export default async function Page() {
           <CardContent>
             {certificates.length === 0 ? (
               <EmptyState
-                icon={<Award className="h-8 w-8" />}
+                icon={
+                  <Award className="h-8 w-8" />
+                }
                 title="No certificates yet"
                 description="Your issued certificates will appear here."
               />
             ) : (
               <div className="flex flex-col gap-3">
-                {certificates.slice(0, 2).map((certificate) => (
-                  <div
-                    key={certificate.id}
-                    className="flex items-center gap-4 rounded-xl border border-border p-4"
-                  >
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                      <Award className="h-5 w-5" />
+                {certificates
+                  .slice(0, 2)
+                  .map((certificate) => (
+                    <div
+                      key={certificate.id}
+                      className="flex items-center gap-4 rounded-xl border border-border p-4"
+                    >
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                        <Award className="h-5 w-5" />
+                      </div>
+
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-foreground">
+                          {certificate.title}
+                        </p>
+
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {certificate.certificate_number}
+                        </p>
+
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          Issued{" "}
+                          {formatDate(
+                            certificate.issue_date
+                          )}
+                        </p>
+                      </div>
+
+                      <Badge className="ml-auto">
+                        Issued
+                      </Badge>
                     </div>
-
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-foreground">
-                        {certificate.title}
-                      </p>
-
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {certificate.certificate_number}
-                      </p>
-
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        Issued {formatDate(certificate.issue_date)}
-                      </p>
-                    </div>
-
-                    <Badge className="ml-auto">
-                      Issued
-                    </Badge>
-                  </div>
-                ))}
+                  ))}
               </div>
             )}
           </CardContent>
@@ -919,40 +1029,46 @@ export default async function Page() {
         <CardContent>
           {announcements.length === 0 ? (
             <EmptyState
-              icon={<AlertCircle className="h-8 w-8" />}
+              icon={
+                <AlertCircle className="h-8 w-8" />
+              }
               title="No announcements"
               description="New academy announcements will appear here."
             />
           ) : (
             <div className="divide-y">
-              {announcements.map((announcement) => (
-                <div
-                  key={announcement.id}
-                  className="flex items-start gap-3 py-4 first:pt-0 last:pb-0"
-                >
-                  <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                    <AlertCircle className="h-4 w-4" />
-                  </div>
-
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="text-sm font-semibold text-foreground">
-                        {announcement.title}
-                      </p>
-
-                      <Badge variant="secondary">
-                        {getAnnouncementLabel(
-                          announcement.announcement_type
-                        )}
-                      </Badge>
+              {announcements.map(
+                (announcement) => (
+                  <div
+                    key={announcement.id}
+                    className="flex items-start gap-3 py-4 first:pt-0 last:pb-0"
+                  >
+                    <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                      <AlertCircle className="h-4 w-4" />
                     </div>
 
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {formatDate(announcement.published_at)}
-                    </p>
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-sm font-semibold text-foreground">
+                          {announcement.title}
+                        </p>
+
+                        <Badge variant="secondary">
+                          {getAnnouncementLabel(
+                            announcement.announcement_type
+                          )}
+                        </Badge>
+                      </div>
+
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {formatDate(
+                          announcement.published_at
+                        )}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              ))}
+                )
+              )}
             </div>
           )}
         </CardContent>
@@ -967,47 +1083,65 @@ export default async function Page() {
 
           <Badge
             variant={
-              profile.is_active ? "default" : "destructive"
+              profile.is_active
+                ? "default"
+                : "destructive"
             }
           >
-            {profile.is_active ? "Active" : "Inactive"}
+            {profile.is_active
+              ? "Active"
+              : "Inactive"}
           </Badge>
         </CardHeader>
 
         <CardContent>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <DetailItem
-              icon={<User className="h-4 w-4" />}
+              icon={
+                <User className="h-4 w-4" />
+              }
               label="Full Name"
               value={profile.fullname}
             />
 
             <DetailItem
-              icon={<Mail className="h-4 w-4" />}
+              icon={
+                <Mail className="h-4 w-4" />
+              }
               label="Email"
-              value={profile.email || user.email}
+              value={
+                profile.email || user.email
+              }
             />
 
             <DetailItem
-              icon={<Phone className="h-4 w-4" />}
+              icon={
+                <Phone className="h-4 w-4" />
+              }
               label="Phone"
               value={profile.phone}
             />
 
             <DetailItem
-              icon={<GraduationCap className="h-4 w-4" />}
+              icon={
+                <GraduationCap className="h-4 w-4" />
+              }
               label="Qualification"
               value={profile.qualification}
             />
 
             <DetailItem
-              icon={<MapPin className="h-4 w-4" />}
+              icon={
+                <MapPin className="h-4 w-4" />
+              }
               label="City"
               value={profile.city}
             />
 
             <DetailItem
-              icon={<Briefcase className="h-4 w-4" />}
+              icon={
+                <Briefcase className="h-4 w-4" />
+              }
               label="Experience"
               value={profile.experience}
             />

@@ -11,9 +11,9 @@ export default async function AdminPortalLayout({
   return (
     <AdminShellClient
       user={{
-        name: profile.full_name || user.email || "Admin",
+        name: profile.fullname || user.email || "Admin",
         email: profile.email ?? user.email ?? "",
-        avatarUrl: profile.avatar_url,
+        avatarUrl: undefined,
       }}
     >
       {children}

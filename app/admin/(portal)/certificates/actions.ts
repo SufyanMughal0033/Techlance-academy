@@ -9,14 +9,17 @@ export async function createCertificate(formData: FormData): Promise<void> {
   const studentId = String(formData.get("student_id") || "").trim();
   const programId = String(formData.get("program_id") || "").trim();
   const issueDate = String(formData.get("issue_date") || "").trim();
-  const expiryDate = String(formData.get("expiry_date") || "").trim();
   const status = String(formData.get("status") || "issued").trim();
-  const certificateUrl = String(formData.get("certificate_url") || "").trim();
-  const notes = String(formData.get("notes") || "").trim();
+  const certificateUrl = String(
+    formData.get("certificate_url") || ""
+  ).trim();
+  const description = String(
+    formData.get("description") || ""
+  ).trim();
 
-  if (!studentId || !issueDate) {
+  if (!studentId || !programId || !issueDate) {
     console.error(
-      "Create Certificate: Student and issue date are required."
+      "Create Certificate: Student, program and issue date are required."
     );
     return;
   }
@@ -26,22 +29,21 @@ export async function createCertificate(formData: FormData): Promise<void> {
     return;
   }
 
-  if (expiryDate && issueDate && expiryDate < issueDate) {
-    console.error(
-      "Create Certificate: Expiry date cannot be before issue date."
-    );
-    return;
-  }
-
-  const { error } = await supabase.from("certificates").insert({
+  const certificateInsert = {
     student_id: studentId,
-    program_id: programId || null,
+    program_id: programId,
     issue_date: issueDate,
-    expiry_date: expiryDate || null,
     status,
     certificate_url: certificateUrl || null,
-    notes: notes || null,
-  });
+    description: description || null,
+  };
+
+  // certificate_number is generated automatically by the database trigger.
+  // The generated database type currently marks it as required,
+  // so we intentionally bypass only this stale TypeScript requirement.
+  const { error } = await supabase
+    .from("certificates")
+    .insert(certificateInsert as never);
 
   if (error) {
     console.error("Create Certificate Error:", {
@@ -68,14 +70,17 @@ export async function updateCertificate(formData: FormData): Promise<void> {
   const studentId = String(formData.get("student_id") || "").trim();
   const programId = String(formData.get("program_id") || "").trim();
   const issueDate = String(formData.get("issue_date") || "").trim();
-  const expiryDate = String(formData.get("expiry_date") || "").trim();
   const status = String(formData.get("status") || "issued").trim();
-  const certificateUrl = String(formData.get("certificate_url") || "").trim();
-  const notes = String(formData.get("notes") || "").trim();
+  const certificateUrl = String(
+    formData.get("certificate_url") || ""
+  ).trim();
+  const description = String(
+    formData.get("description") || ""
+  ).trim();
 
-  if (!id || !studentId || !issueDate) {
+  if (!id || !studentId || !programId || !issueDate) {
     console.error(
-      "Update Certificate: Required fields are missing."
+      "Update Certificate: Certificate ID, student, program and issue date are required."
     );
     return;
   }
@@ -85,25 +90,19 @@ export async function updateCertificate(formData: FormData): Promise<void> {
     return;
   }
 
-  if (expiryDate && issueDate && expiryDate < issueDate) {
-    console.error(
-      "Update Certificate: Expiry date cannot be before issue date."
-    );
-    return;
-  }
+  const certificateUpdate = {
+    student_id: studentId,
+    program_id: programId,
+    issue_date: issueDate,
+    status,
+    certificate_url: certificateUrl || null,
+    description: description || null,
+    updated_at: new Date().toISOString(),
+  };
 
   const { error } = await supabase
     .from("certificates")
-    .update({
-      student_id: studentId,
-      program_id: programId || null,
-      issue_date: issueDate,
-      expiry_date: expiryDate || null,
-      status,
-      certificate_url: certificateUrl || null,
-      notes: notes || null,
-      updated_at: new Date().toISOString(),
-    })
+    .update(certificateUpdate)
     .eq("id", id);
 
   if (error) {
