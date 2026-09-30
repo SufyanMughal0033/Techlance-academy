@@ -1,5 +1,11 @@
+import Link from "next/link";
+
 import { Card, CardContent } from "@/components/ui/card";
 import { createClient } from "@/lib/supabase/server";
+import {
+  approveApplication,
+  rejectApplication,
+} from "./actions";
 
 export const metadata = {
   title: "Applications",
@@ -14,6 +20,7 @@ type Application = {
   qualification: string;
   city: string;
   experience: string;
+  message: string;
   status: "pending" | "approved" | "rejected";
   reviewed_at: string | null;
   student_id: string | null;
@@ -48,9 +55,9 @@ export default async function Page() {
   const { data: applications, error } = await supabase
     .from("applications")
     .select(
-      "id, full_name, email, phone, program, qualification, city, experience, status, reviewed_at, student_id"
+      "id, full_name, email, phone, program, qualification, city, experience, message, status, reviewed_at, student_id"
     )
-    .order("status", { ascending: true });
+    .order("created_at", { ascending: false });
 
   if (error) {
     return (
@@ -96,7 +103,6 @@ export default async function Page() {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Header */}
       <div>
         <h2 className="font-display text-xl font-semibold text-foreground">
           Applications
@@ -108,7 +114,6 @@ export default async function Page() {
         </p>
       </div>
 
-      {/* Stats */}
       <div className="grid gap-4 sm:grid-cols-3">
         <Card>
           <CardContent className="p-5">
@@ -147,7 +152,6 @@ export default async function Page() {
         </Card>
       </div>
 
-      {/* Applications */}
       <Card>
         <CardContent className="p-0">
           {rows.length === 0 ? (
@@ -162,7 +166,7 @@ export default async function Page() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[900px] text-sm">
+              <table className="w-full min-w-[1100px] text-sm">
                 <thead>
                   <tr className="border-b bg-muted/30">
                     <th className="px-5 py-4 text-left font-medium">
@@ -231,20 +235,102 @@ export default async function Page() {
                         <StatusBadge status={application.status} />
                       </td>
 
-                      <td className="px-5 py-4 text-right">
-                        {application.status === "pending" ? (
-                          <span className="text-xs font-medium text-primary">
-                            Review Required
-                          </span>
-                        ) : application.status === "approved" ? (
-                          <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                            Admission Approved
-                          </span>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">
-                            Application Rejected
-                          </span>
-                        )}
+                      <td className="px-5 py-4">
+                        <div className="flex items-center justify-end gap-2">
+                          <details className="relative">
+                            <summary className="cursor-pointer list-none rounded-md border border-input bg-background px-3 py-2 text-xs font-medium transition-colors hover:bg-muted">
+                              View
+                            </summary>
+
+                            <div className="absolute right-0 z-20 mt-2 w-80 rounded-lg border border-border bg-background p-4 text-left shadow-lg">
+                              <div className="space-y-3">
+                                <div>
+                                  <p className="text-xs font-medium text-muted-foreground">
+                                    Experience
+                                  </p>
+                                  <p className="mt-1 text-sm text-foreground">
+                                    {application.experience || "—"}
+                                  </p>
+                                </div>
+
+                                <div>
+                                  <p className="text-xs font-medium text-muted-foreground">
+                                    Message
+                                  </p>
+                                  <p className="mt-1 text-sm leading-relaxed text-foreground">
+                                    {application.message || "—"}
+                                  </p>
+                                </div>
+
+                                {application.reviewed_at && (
+                                  <div>
+                                    <p className="text-xs font-medium text-muted-foreground">
+                                      Reviewed
+                                    </p>
+                                    <p className="mt-1 text-sm text-foreground">
+                                      {new Date(
+                                        application.reviewed_at
+                                      ).toLocaleString()}
+                                    </p>
+                                  </div>
+                                )}
+
+                                {application.student_id && (
+                                  <div>
+                                    <p className="text-xs font-medium text-muted-foreground">
+                                      Student ID
+                                    </p>
+                                    <p className="mt-1 break-all text-sm text-foreground">
+                                      {application.student_id}
+                                    </p>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </details>
+
+                          {application.status === "pending" ? (
+                            <>
+                              <form action={approveApplication}>
+                                <input
+                                  type="hidden"
+                                  name="id"
+                                  value={application.id}
+                                />
+
+                                <button
+                                  type="submit"
+                                  className="rounded-md bg-emerald-600 px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-emerald-700"
+                                >
+                                  Approve
+                                </button>
+                              </form>
+
+                              <form action={rejectApplication}>
+                                <input
+                                  type="hidden"
+                                  name="id"
+                                  value={application.id}
+                                />
+
+                                <button
+                                  type="submit"
+                                  className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-600 transition-colors hover:bg-red-100 dark:border-red-900/50 dark:bg-red-950/20 dark:text-red-400 dark:hover:bg-red-950/40"
+                                >
+                                  Reject
+                                </button>
+                              </form>
+                            </>
+                          ) : application.status === "approved" ? (
+                            <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                              Admission Approved
+                            </span>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">
+                              Application Rejected
+                            </span>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
