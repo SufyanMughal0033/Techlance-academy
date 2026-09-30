@@ -43,6 +43,7 @@ export const footerNav = {
     { title: "Programs", href: "/programs" },
     { title: "Admissions", href: "/admissions" },
     { title: "Blog", href: "/blog" },
+    { title: "Testimonials", href: "/testimonials" },
     { title: "Contact", href: "/contact" },
   ],
   student: [

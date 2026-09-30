@@ -2,41 +2,58 @@ import type { Metadata, Viewport } from "next";
 
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme/theme-provider";
-import { siteConfig } from "@/lib/site-config";
+import { getSiteSettings } from "@/lib/site-settings";
 import { SmoothScroll } from "@/components/smooth-scroll/smooth-scroll";
 
-export const metadata: Metadata = {
-  metadataBase: new URL(siteConfig.url),
-  title: {
-    default: `${siteConfig.name} — ${siteConfig.tagline}`,
-    template: `%s — ${siteConfig.name}`,
-  },
-  description: siteConfig.description,
-  openGraph: {
-    type: "website",
-    locale: "en_PK",
-    url: siteConfig.url,
-    siteName: siteConfig.name,
-    title: `${siteConfig.name} — ${siteConfig.tagline}`,
-    description: siteConfig.description,
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: `${siteConfig.name} — ${siteConfig.tagline}`,
-    description: siteConfig.description,
-  },
-  icons: {
-    icon: "/favicon.ico",
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await getSiteSettings();
+
+  const favicon = settings.faviconUrl || "/favicon.ico";
+
+  return {
+    metadataBase: new URL(settings.url),
+
+    title: {
+      default: `${settings.name} — ${settings.tagline}`,
+      template: `%s — ${settings.name}`,
+    },
+
+    description: settings.description,
+
+    openGraph: {
+      type: "website",
+      locale: "en_PK",
+      url: settings.url,
+      siteName: settings.name,
+      title: `${settings.name} — ${settings.tagline}`,
+      description: settings.description,
+    },
+
+    twitter: {
+      card: "summary_large_image",
+      title: `${settings.name} — ${settings.tagline}`,
+      description: settings.description,
+    },
+
+    icons: {
+      icon: favicon,
+    },
+  };
+}
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#faf9f6" },
-    { media: "(prefers-color-scheme: dark)", color: "#0e1013" },
+    {
+      media: "(prefers-color-scheme: light)",
+      color: "#faf9f6",
+    },
+    {
+      media: "(prefers-color-scheme: dark)",
+      color: "#0e1013",
+    },
   ],
 };
 

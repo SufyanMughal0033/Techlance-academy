@@ -536,6 +536,39 @@ export type Database = {
           },
         ]
       }
+      faqs: {
+        Row: {
+          answer: string
+          category: string | null
+          created_at: string
+          display_order: number
+          id: string
+          question: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          answer: string
+          category?: string | null
+          created_at?: string
+          display_order?: number
+          id?: string
+          question: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          answer?: string
+          category?: string | null
+          created_at?: string
+          display_order?: number
+          id?: string
+          question?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       materials: {
         Row: {
           created_at: string
@@ -789,6 +822,66 @@ export type Database = {
           title?: string
           updated_at?: string
           url?: string
+        }
+        Relationships: []
+      }
+      site_settings: {
+        Row: {
+          academy_name: string
+          address: string | null
+          created_at: string
+          description: string | null
+          email: string | null
+          facebook_url: string | null
+          favicon_url: string | null
+          id: string
+          instagram_url: string | null
+          linkedin_url: string | null
+          logo_url: string | null
+          phone: string | null
+          tagline: string | null
+          updated_at: string
+          website: string | null
+          whatsapp: string | null
+          youtube_url: string | null
+        }
+        Insert: {
+          academy_name?: string
+          address?: string | null
+          created_at?: string
+          description?: string | null
+          email?: string | null
+          facebook_url?: string | null
+          favicon_url?: string | null
+          id?: string
+          instagram_url?: string | null
+          linkedin_url?: string | null
+          logo_url?: string | null
+          phone?: string | null
+          tagline?: string | null
+          updated_at?: string
+          website?: string | null
+          whatsapp?: string | null
+          youtube_url?: string | null
+        }
+        Update: {
+          academy_name?: string
+          address?: string | null
+          created_at?: string
+          description?: string | null
+          email?: string | null
+          facebook_url?: string | null
+          favicon_url?: string | null
+          id?: string
+          instagram_url?: string | null
+          linkedin_url?: string | null
+          logo_url?: string | null
+          phone?: string | null
+          tagline?: string | null
+          updated_at?: string
+          website?: string | null
+          whatsapp?: string | null
+          youtube_url?: string | null
         }
         Relationships: []
       }
@@ -1092,6 +1185,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      testimonials: {
+        Row: {
+          avatar_url: string | null
+          company: string | null
+          content: string
+          created_at: string
+          display_order: number
+          id: string
+          name: string
+          rating: number
+          role: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          company?: string | null
+          content: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          name: string
+          rating?: number
+          role?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          company?: string | null
+          content?: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          name?: string
+          rating?: number
+          role?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       tests: {
         Row: {
