@@ -33,8 +33,6 @@ const initialForm: FormState = {
 };
 
 export function ApplyForm() {
-  const supabase = createClient();
-
   const [programs, setPrograms] = useState<Program[]>([]);
   const [selectedProgram, setSelectedProgram] = useState<Program | null>(
     null,
@@ -47,6 +45,8 @@ export function ApplyForm() {
   const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
+    const supabase = createClient();
+
     async function loadPrograms() {
       setLoadingPrograms(true);
       setErrorMessage("");
@@ -130,6 +130,8 @@ export function ApplyForm() {
       setSubmitting(false);
       return;
     }
+
+    const supabase = createClient();
 
     const { error } = await supabase.from("applications").insert({
       full_name: form.full_name.trim(),
@@ -383,7 +385,7 @@ export function ApplyForm() {
                     onChange={handleChange}
                     placeholder="Anything else you would like us to know?"
                     rows={5}
-                    className="w-full resize-none rounded-xl border border-black/10 bg-transparent px-4 py-3 text-sm outline-none transition placeholder:text-black/35 focus:border-black/30 dark:border-white/10 dark:text-white dark:placeholder:text-white/30 dark:focus:border-white/30"
+                    className="w-full resize-none rounded-xl border border-black/10 bg-transparent px-4 py-3 text-sm outline-none transition placeholder:text-black/35 focus:border-black/30 dark:border-white/10 dark:bg-transparent dark:text-white dark:placeholder:text-white/30 dark:focus:border-white/30"
                   />
                 </div>
               </div>
