@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -21,6 +22,32 @@ type Program = {
   created_at: string;
   updated_at: string;
 };
+
+function getProgramImage(program: Program) {
+  const text = `${program.slug} ${program.title}`.toLowerCase();
+
+  if (text.includes("full") && text.includes("stack")) {
+    return "/images/programs/full-stack.jpg";
+  }
+
+  if (text.includes("digital") && text.includes("marketing")) {
+    return "/images/programs/digital-marketing.jpg";
+  }
+
+  if (text.includes("graphic") || text.includes("design")) {
+    return "/images/programs/graphic-design.jpg";
+  }
+
+  if (text.includes("seo")) {
+    return "/images/programs/seo.jpg";
+  }
+
+  if (text.includes("web")) {
+    return "/images/programs/web-development.jpg";
+  }
+
+  return "/images/programs/web-development.jpg";
+}
 
 export default async function ProgramDetailPage({
   params,
@@ -119,6 +146,8 @@ export default async function ProgramDetailPage({
     );
   }
 
+  const programImage = getProgramImage(typedProgram);
+
   return (
     <>
       <PageHero
@@ -132,8 +161,23 @@ export default async function ProgramDetailPage({
           <div className="grid gap-8 lg:grid-cols-[1.4fr_0.6fr]">
             {/* Main Content */}
             <div>
-              <div className="flex aspect-[16/8] items-center justify-center overflow-hidden rounded-3xl border border-border bg-gradient-to-br from-primary/15 via-muted to-primary/5">
-                <BookOpen className="h-20 w-20 text-primary/25" />
+              {/* Program Image */}
+              <div className="relative aspect-[16/8] overflow-hidden rounded-3xl border border-border bg-muted">
+                <Image
+                  src={programImage}
+                  alt={`${typedProgram.title} - Techlance Academy`}
+                  fill
+                  priority
+                  className="object-contain transition duration-500 hover:scale-[1.02]"
+                  sizes="(max-width: 1024px) 100vw, 70vw"
+                />
+
+                <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none" />
+
+                <div className="absolute left-5 top-5 inline-flex items-center gap-1.5 rounded-full bg-background/95 px-3 py-1.5 text-xs font-bold shadow-sm backdrop-blur">
+                  <Sparkles className="h-3.5 w-3.5 text-primary" />
+                  Techlance Academy
+                </div>
               </div>
 
               <div className="mt-8">

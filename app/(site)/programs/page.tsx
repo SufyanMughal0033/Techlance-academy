@@ -1,4 +1,4 @@
-
+import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -25,6 +25,32 @@ type Program = {
   created_at: string;
   updated_at: string;
 };
+
+function getProgramImage(program: Program) {
+  const text = `${program.slug} ${program.title}`.toLowerCase();
+
+  if (text.includes("full") && text.includes("stack")) {
+    return "/images/programs/full-stack.jpg";
+  }
+
+  if (text.includes("web")) {
+    return "/images/programs/web-development.jpg";
+  }
+
+  if (text.includes("digital") && text.includes("marketing")) {
+    return "/images/programs/digital-marketing.jpg";
+  }
+
+  if (text.includes("graphic") || text.includes("design")) {
+    return "/images/programs/graphic-design.jpg";
+  }
+
+  if (text.includes("seo")) {
+    return "/images/programs/seo.jpg";
+  }
+
+  return "/images/programs/web-development.jpg";
+}
 
 export default async function Page({
   searchParams,
@@ -170,9 +196,17 @@ export default async function Page({
                   key={program.id}
                   className="group flex h-full flex-col overflow-hidden rounded-3xl border border-border bg-card transition duration-300 hover:-translate-y-1 hover:shadow-xl"
                 >
-                  {/* Program Visual */}
-                  <div className="relative flex aspect-[16/9] items-center justify-center overflow-hidden bg-gradient-to-br from-primary/15 via-muted to-primary/5">
-                    <BookOpen className="h-16 w-16 text-primary/25 transition duration-500 group-hover:scale-110" />
+                  {/* Program Image */}
+                  <div className="relative aspect-[16/9] overflow-hidden bg-muted">
+                    <Image
+                      src={getProgramImage(program)}
+                      alt={`${program.title} - Techlance Academy`}
+                      fill
+                      className="object-cover transition duration-500 group-hover:scale-105"
+                      sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                    />
+
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent" />
 
                     <div className="absolute left-4 top-4 inline-flex items-center gap-1.5 rounded-full bg-background/95 px-3 py-1.5 text-xs font-bold shadow-sm backdrop-blur">
                       <Sparkles className="h-3.5 w-3.5 text-primary" />
@@ -297,3 +331,4 @@ export default async function Page({
     </>
   );
 }
+
