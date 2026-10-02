@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { ApproveApplicationButton } from "@/components/admin/approve-application-button";
 import { rejectApplication } from "./actions";
 import { ResetStudentPasswordButton } from "@/components/admin/reset-student-password-button";
+import DeleteApplicationButton from "@/components/admin/delete-application-button";
+
 export const metadata = {
   title: "Applications",
 };
@@ -62,12 +64,6 @@ export default async function Page() {
       ascending: false,
     });
 
-  /*
-   * ----------------------------------------------------
-   * DATABASE ERROR
-   * ----------------------------------------------------
-   */
-
   if (error) {
     return (
       <div className="flex flex-col gap-6">
@@ -99,18 +95,15 @@ export default async function Page() {
   const rows = (applications ?? []) as Application[];
 
   const pendingCount = rows.filter(
-    (application) =>
-      application.status === "pending"
+    (application) => application.status === "pending"
   ).length;
 
   const approvedCount = rows.filter(
-    (application) =>
-      application.status === "approved"
+    (application) => application.status === "approved"
   ).length;
 
   const rejectedCount = rows.filter(
-    (application) =>
-      application.status === "rejected"
+    (application) => application.status === "rejected"
   ).length;
 
   return (
@@ -123,8 +116,8 @@ export default async function Page() {
         </h2>
 
         <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-          Review admission applications and manage the
-          student admission process.
+          Review admission applications and manage the student admission
+          process.
         </p>
       </div>
 
@@ -179,13 +172,12 @@ export default async function Page() {
               </p>
 
               <p className="mt-1 text-sm text-muted-foreground">
-                New admission applications will appear
-                here.
+                New admission applications will appear here.
               </p>
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[1100px] text-sm">
+              <table className="w-full min-w-[1200px] text-sm">
                 <thead>
                   <tr className="border-b bg-muted/30">
                     <th className="px-5 py-4 text-left font-medium">
@@ -249,8 +241,7 @@ export default async function Page() {
                       {/* Qualification */}
 
                       <td className="px-5 py-4 text-muted-foreground">
-                        {application.qualification ||
-                          "—"}
+                        {application.qualification || "—"}
                       </td>
 
                       {/* City */}
@@ -262,9 +253,7 @@ export default async function Page() {
                       {/* Status */}
 
                       <td className="px-5 py-4">
-                        <StatusBadge
-                          status={application.status}
-                        />
+                        <StatusBadge status={application.status} />
                       </td>
 
                       {/* Actions */}
@@ -286,8 +275,7 @@ export default async function Page() {
                                   </p>
 
                                   <p className="mt-1 text-sm text-foreground">
-                                    {application.experience ||
-                                      "—"}
+                                    {application.experience || "—"}
                                   </p>
                                 </div>
 
@@ -297,8 +285,7 @@ export default async function Page() {
                                   </p>
 
                                   <p className="mt-1 text-sm leading-relaxed text-foreground">
-                                    {application.message ||
-                                      "—"}
+                                    {application.message || "—"}
                                   </p>
                                 </div>
 
@@ -323,9 +310,7 @@ export default async function Page() {
                                     </p>
 
                                     <p className="mt-1 break-all text-sm text-foreground">
-                                      {
-                                        application.student_id
-                                      }
+                                      {application.student_id}
                                     </p>
                                   </div>
                                 )}
@@ -335,26 +320,17 @@ export default async function Page() {
 
                           {/* Pending */}
 
-                          {application.status ===
-                          "pending" ? (
+                          {application.status === "pending" ? (
                             <>
                               <ApproveApplicationButton
-                                applicationId={
-                                  application.id
-                                }
+                                applicationId={application.id}
                               />
 
-                              <form
-                                action={
-                                  rejectApplication
-                                }
-                              >
+                              <form action={rejectApplication}>
                                 <input
                                   type="hidden"
                                   name="id"
-                                  value={
-                                    application.id
-                                  }
+                                  value={application.id}
                                 />
 
                                 <button
@@ -365,24 +341,31 @@ export default async function Page() {
                                 </button>
                               </form>
                             </>
-                          ) : application.status ===
-                            "approved" ? (
-                           <div className="flex flex-col items-end gap-2">
-  <span className="text-emerald-400">
-    Admission Approved
-  </span>
+                          ) : application.status === "approved" ? (
+                            <div className="flex flex-col items-end gap-2">
+                              <span className="text-emerald-400">
+                                Admission Approved
+                              </span>
 
-  {application.student_id && (
-    <ResetStudentPasswordButton
-      applicationId={application.id}
-    />
-  )}
-</div>
+                              {application.student_id && (
+                                <ResetStudentPasswordButton
+                                  applicationId={application.id}
+                                />
+                              )}
+                            </div>
                           ) : (
                             <span className="text-xs text-muted-foreground">
                               Application Rejected
                             </span>
                           )}
+
+                          {/* Permanent Delete */}
+
+                          <DeleteApplicationButton
+                            applicationId={application.id}
+                            applicantName={application.full_name}
+                            applicantEmail={application.email}
+                          />
                         </div>
                       </td>
                     </tr>
