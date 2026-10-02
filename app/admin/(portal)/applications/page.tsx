@@ -1,11 +1,7 @@
-import Link from "next/link";
-
 import { Card, CardContent } from "@/components/ui/card";
 import { createClient } from "@/lib/supabase/server";
-import {
-  approveApplication,
-  rejectApplication,
-} from "./actions";
+import { ApproveApplicationButton } from "@/components/admin/approve-application-button";
+import { rejectApplication } from "./actions";
 
 export const metadata = {
   title: "Applications",
@@ -34,8 +30,10 @@ function StatusBadge({
   const styles = {
     pending:
       "bg-amber-500/10 text-amber-600 dark:text-amber-400",
+
     approved:
       "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+
     rejected:
       "bg-red-500/10 text-red-600 dark:text-red-400",
   };
@@ -52,12 +50,23 @@ function StatusBadge({
 export default async function Page() {
   const supabase = await createClient();
 
-  const { data: applications, error } = await supabase
+  const {
+    data: applications,
+    error,
+  } = await supabase
     .from("applications")
     .select(
       "id, full_name, email, phone, program, qualification, city, experience, message, status, reviewed_at, student_id"
     )
-    .order("created_at", { ascending: false });
+    .order("created_at", {
+      ascending: false,
+    });
+
+  /*
+   * ----------------------------------------------------
+   * DATABASE ERROR
+   * ----------------------------------------------------
+   */
 
   if (error) {
     return (
@@ -90,29 +99,36 @@ export default async function Page() {
   const rows = (applications ?? []) as Application[];
 
   const pendingCount = rows.filter(
-    (application) => application.status === "pending"
+    (application) =>
+      application.status === "pending"
   ).length;
 
   const approvedCount = rows.filter(
-    (application) => application.status === "approved"
+    (application) =>
+      application.status === "approved"
   ).length;
 
   const rejectedCount = rows.filter(
-    (application) => application.status === "rejected"
+    (application) =>
+      application.status === "rejected"
   ).length;
 
   return (
     <div className="flex flex-col gap-6">
+      {/* Header */}
+
       <div>
         <h2 className="font-display text-xl font-semibold text-foreground">
           Applications
         </h2>
 
         <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-          Review admission applications and manage the student admission
-          process.
+          Review admission applications and manage the
+          student admission process.
         </p>
       </div>
+
+      {/* Statistics */}
 
       <div className="grid gap-4 sm:grid-cols-3">
         <Card>
@@ -152,6 +168,8 @@ export default async function Page() {
         </Card>
       </div>
 
+      {/* Applications */}
+
       <Card>
         <CardContent className="p-0">
           {rows.length === 0 ? (
@@ -161,7 +179,8 @@ export default async function Page() {
               </p>
 
               <p className="mt-1 text-sm text-muted-foreground">
-                New admission applications will appear here.
+                New admission applications will appear
+                here.
               </p>
             </div>
           ) : (
@@ -201,6 +220,8 @@ export default async function Page() {
                       key={application.id}
                       className="border-b last:border-0 hover:bg-muted/20"
                     >
+                      {/* Applicant */}
+
                       <td className="px-5 py-4">
                         <div>
                           <p className="font-medium text-foreground">
@@ -217,26 +238,41 @@ export default async function Page() {
                         </div>
                       </td>
 
+                      {/* Program */}
+
                       <td className="px-5 py-4">
                         <span className="font-medium text-foreground">
                           {application.program}
                         </span>
                       </td>
 
+                      {/* Qualification */}
+
                       <td className="px-5 py-4 text-muted-foreground">
-                        {application.qualification || "—"}
+                        {application.qualification ||
+                          "—"}
                       </td>
+
+                      {/* City */}
 
                       <td className="px-5 py-4 text-muted-foreground">
                         {application.city || "—"}
                       </td>
 
+                      {/* Status */}
+
                       <td className="px-5 py-4">
-                        <StatusBadge status={application.status} />
+                        <StatusBadge
+                          status={application.status}
+                        />
                       </td>
+
+                      {/* Actions */}
 
                       <td className="px-5 py-4">
                         <div className="flex items-center justify-end gap-2">
+                          {/* View */}
+
                           <details className="relative">
                             <summary className="cursor-pointer list-none rounded-md border border-input bg-background px-3 py-2 text-xs font-medium transition-colors hover:bg-muted">
                               View
@@ -248,8 +284,10 @@ export default async function Page() {
                                   <p className="text-xs font-medium text-muted-foreground">
                                     Experience
                                   </p>
+
                                   <p className="mt-1 text-sm text-foreground">
-                                    {application.experience || "—"}
+                                    {application.experience ||
+                                      "—"}
                                   </p>
                                 </div>
 
@@ -257,8 +295,10 @@ export default async function Page() {
                                   <p className="text-xs font-medium text-muted-foreground">
                                     Message
                                   </p>
+
                                   <p className="mt-1 text-sm leading-relaxed text-foreground">
-                                    {application.message || "—"}
+                                    {application.message ||
+                                      "—"}
                                   </p>
                                 </div>
 
@@ -267,6 +307,7 @@ export default async function Page() {
                                     <p className="text-xs font-medium text-muted-foreground">
                                       Reviewed
                                     </p>
+
                                     <p className="mt-1 text-sm text-foreground">
                                       {new Date(
                                         application.reviewed_at
@@ -280,8 +321,11 @@ export default async function Page() {
                                     <p className="text-xs font-medium text-muted-foreground">
                                       Student ID
                                     </p>
+
                                     <p className="mt-1 break-all text-sm text-foreground">
-                                      {application.student_id}
+                                      {
+                                        application.student_id
+                                      }
                                     </p>
                                   </div>
                                 )}
@@ -289,28 +333,28 @@ export default async function Page() {
                             </div>
                           </details>
 
-                          {application.status === "pending" ? (
+                          {/* Pending */}
+
+                          {application.status ===
+                          "pending" ? (
                             <>
-                              <form action={approveApplication}>
+                              <ApproveApplicationButton
+                                applicationId={
+                                  application.id
+                                }
+                              />
+
+                              <form
+                                action={
+                                  rejectApplication
+                                }
+                              >
                                 <input
                                   type="hidden"
                                   name="id"
-                                  value={application.id}
-                                />
-
-                                <button
-                                  type="submit"
-                                  className="rounded-md bg-emerald-600 px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-emerald-700"
-                                >
-                                  Approve
-                                </button>
-                              </form>
-
-                              <form action={rejectApplication}>
-                                <input
-                                  type="hidden"
-                                  name="id"
-                                  value={application.id}
+                                  value={
+                                    application.id
+                                  }
                                 />
 
                                 <button
@@ -321,7 +365,8 @@ export default async function Page() {
                                 </button>
                               </form>
                             </>
-                          ) : application.status === "approved" ? (
+                          ) : application.status ===
+                            "approved" ? (
                             <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
                               Admission Approved
                             </span>

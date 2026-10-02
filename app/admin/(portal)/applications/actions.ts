@@ -1,9 +1,21 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/auth";
+
+export type ApproveApplicationResult = {
+  success: boolean;
+  message?: string;
+  error?: string;
+  credentials?: {
+    name: string;
+    email: string;
+    password: string;
+  };
+};
 
 async function findAuthUserByEmail(email: string) {
   const adminSupabase = createAdminClient();
@@ -41,27 +53,36 @@ async function findAuthUserByEmail(email: string) {
   }
 }
 
+function generateTemporaryPassword() {
+  const randomPart = crypto.randomUUID().replace(/-/g, "");
+
+  return `TL@${randomPart.slice(0, 10)}9`;
+}
+
 export async function approveApplication(
   formData: FormData
-): Promise<void> {
-  const { user: adminUser } = await requireRole("admin");
+): Promise<ApproveApplicationResult> {
+  try {
+    const { user: adminUser } = await requireRole("admin");
 
-  const supabase = await createClient();
-  const adminSupabase = createAdminClient();
+    const supabase = await createClient();
+    const adminSupabase = createAdminClient();
 
-  const applicationId = String(
-    formData.get("id") || ""
-  ).trim();
+    const applicationId = String(
+      formData.get("id") || ""
+    ).trim();
 
-  if (!applicationId) {
-    console.error(
-      "Approve Application: Application ID is required."
-    );
-    return;
-  }
+    if (!applicationId) {
+      return {
+        success: false,
+        error: "Application ID is required.",
+      };
+    }
 
-  const { data: application, error: applicationError } =
-    await supabase
+    const {
+      data: application,
+      error: applicationError,
+    } = await supabase
       .from("applications")
       .select(
         "id, full_name, email, phone, program, qualification, city, experience, message, status, student_id"
@@ -69,199 +90,224 @@ export async function approveApplication(
       .eq("id", applicationId)
       .single();
 
-  if (applicationError || !application) {
-    console.error(
-      "Approve Application: Application not found.",
-      applicationError?.message
-    );
+    if (applicationError || !application) {
+      return {
+        success: false,
+        error: "The application could not be found.",
+      };
+    }
 
-    throw new Error(
-      "The application could not be found."
-    );
-  }
+    if (application.status !== "pending") {
+      return {
+        success: false,
+        error: "This application has already been processed.",
+      };
+    }
 
-  if (application.status !== "pending") {
-    console.error(
-      "Approve Application: Application is not pending."
-    );
-    return;
-  }
+    const programTitle = application.program.trim();
 
-  const programTitle = application.program.trim();
-
-  const { data: program, error: programError } =
-    await supabase
+    const {
+      data: program,
+      error: programError,
+    } = await supabase
       .from("programs")
       .select("id, title, status")
       .eq("title", programTitle)
       .maybeSingle();
 
-  if (programError) {
-    console.error(
-      "Approve Application: Program lookup failed.",
-      programError.message
-    );
+    if (programError) {
+      return {
+        success: false,
+        error: `Program lookup failed: ${programError.message}`,
+      };
+    }
 
-    throw new Error(
-      `Program lookup failed: ${programError.message}`
-    );
-  }
+    if (!program) {
+      return {
+        success: false,
+        error: `No program was found for "${programTitle}". Make sure the application program exactly matches a program title.`,
+      };
+    }
 
-  if (!program) {
-    throw new Error(
-      `No program was found for "${programTitle}". Please make sure the application program exactly matches a program title.`
-    );
-  }
+    if (
+      program.status !== "active" &&
+      program.status !== "published"
+    ) {
+      return {
+        success: false,
+        error: `The selected program "${program.title}" is not currently available.`,
+      };
+    }
 
-  if (
-    program.status !== "active" &&
-    program.status !== "published"
-  ) {
-    throw new Error(
-      `The selected program "${program.title}" is not currently available.`
-    );
-  }
+    const email = application.email
+      .trim()
+      .toLowerCase();
 
-  const email = application.email.trim().toLowerCase();
+    let authUser = await findAuthUserByEmail(email);
 
-  let authUser = await findAuthUserByEmail(email);
-  let createdAuthUser = false;
+    let createdAuthUser = false;
+    let temporaryPassword = "";
 
-  if (!authUser) {
-    const siteUrl =
-      process.env.NEXT_PUBLIC_SITE_URL ||
-      "http://localhost:3000";
+    /*
+     * ----------------------------------------------------
+     * CREATE STUDENT AUTH ACCOUNT
+     * ----------------------------------------------------
+     */
 
-    const { data, error } =
-      await adminSupabase.auth.admin.inviteUserByEmail(
+    if (!authUser) {
+      temporaryPassword = generateTemporaryPassword();
+
+      const {
+        data,
+        error,
+      } = await adminSupabase.auth.admin.createUser({
         email,
-        {
-          redirectTo: `${siteUrl}/auth/callback?next=/student/set-password`,
-          data: {
-            full_name: application.full_name,
-          },
-        }
-      );
-
-    if (error || !data.user) {
-      console.error(
-        "Approve Application: Auth account creation failed.",
-        error?.message
-      );
-
-      throw new Error(
-        `Student account could not be created: ${
-          error?.message || "Unknown error"
-        }`
-      );
-    }
-
-    authUser = data.user;
-    createdAuthUser = true;
-  }
-
-  const studentUserId = authUser.id;
-
-  const {
-    data: existingProfile,
-    error: profileLookupError,
-  } = await supabase
-    .from("profiles")
-    .select("id, role, is_active")
-    .eq("id", studentUserId)
-    .maybeSingle();
-
-  if (profileLookupError) {
-    console.error(
-      "Approve Application: Profile lookup failed.",
-      profileLookupError.message
-    );
-
-    if (createdAuthUser) {
-      await adminSupabase.auth.admin.deleteUser(
-        studentUserId
-      );
-    }
-
-    throw new Error(
-      `Profile lookup failed: ${profileLookupError.message}`
-    );
-  }
-
-  if (
-    existingProfile &&
-    existingProfile.role !== "student"
-  ) {
-    if (createdAuthUser) {
-      await adminSupabase.auth.admin.deleteUser(
-        studentUserId
-      );
-    }
-
-    throw new Error(
-      "This email is already connected to a non-student account."
-    );
-  }
-
-  if (!existingProfile) {
-    const { error: profileError } = await adminSupabase
-      .from("profiles")
-      .insert({
-        id: studentUserId,
-        fullname: application.full_name,
-        email,
-        phone: application.phone || null,
-        program: application.program || null,
-        qualification: application.qualification || null,
-        city: application.city || null,
-        experience: application.experience || null,
-        message: application.message || null,
-        role: "student",
-        is_active: true,
+        password: temporaryPassword,
+        email_confirm: true,
+        user_metadata: {
+          full_name: application.full_name,
+        },
       });
 
-    if (profileError) {
-      console.error(
-        "Approve Application: Profile creation failed.",
-        profileError.message
-      );
+      if (error || !data.user) {
+        return {
+          success: false,
+          error: `Student account could not be created: ${
+            error?.message || "Unknown error"
+          }`,
+        };
+      }
 
+      authUser = data.user;
+      createdAuthUser = true;
+    }
+
+    const studentUserId = authUser.id;
+
+    /*
+     * ----------------------------------------------------
+     * CHECK EXISTING PROFILE
+     * ----------------------------------------------------
+     */
+
+    const {
+      data: existingProfile,
+      error: profileLookupError,
+    } = await supabase
+      .from("profiles")
+      .select("id, role, is_active")
+      .eq("id", studentUserId)
+      .maybeSingle();
+
+    if (profileLookupError) {
       if (createdAuthUser) {
         await adminSupabase.auth.admin.deleteUser(
           studentUserId
         );
       }
 
-      throw new Error(
-        `Student profile could not be created: ${profileError.message}`
-      );
+      return {
+        success: false,
+        error: `Profile lookup failed: ${profileLookupError.message}`,
+      };
     }
-  }
 
-  const {
-    data: existingEnrollment,
-    error: enrollmentLookupError,
-  } = await adminSupabase
-    .from("enrollments")
-    .select("id, status")
-    .eq("student_id", studentUserId)
-    .eq("program_id", program.id)
-    .maybeSingle();
+    /*
+     * ----------------------------------------------------
+     * MAKE SURE EXISTING ACCOUNT IS A STUDENT
+     * ----------------------------------------------------
+     */
 
-  if (enrollmentLookupError) {
-    console.error(
-      "Approve Application: Enrollment lookup failed.",
-      enrollmentLookupError.message
-    );
+    if (
+      existingProfile &&
+      existingProfile.role !== "student"
+    ) {
+      if (createdAuthUser) {
+        await adminSupabase.auth.admin.deleteUser(
+          studentUserId
+        );
+      }
 
-    throw new Error(
-      `Enrollment lookup failed: ${enrollmentLookupError.message}`
-    );
-  }
+      return {
+        success: false,
+        error:
+          "This email is already connected to a non-student account.",
+      };
+    }
 
-  if (existingEnrollment) {
-    const { error: enrollmentUpdateError } =
-      await adminSupabase
+    /*
+     * ----------------------------------------------------
+     * CREATE STUDENT PROFILE
+     * ----------------------------------------------------
+     */
+
+    if (!existingProfile) {
+      const { error: profileError } =
+        await adminSupabase
+          .from("profiles")
+          .insert({
+            id: studentUserId,
+            fullname: application.full_name,
+            email,
+            phone: application.phone || null,
+            program: application.program || null,
+            qualification:
+              application.qualification || null,
+            city: application.city || null,
+            experience:
+              application.experience || null,
+            message: application.message || null,
+            role: "student",
+            is_active: true,
+          });
+
+      if (profileError) {
+        if (createdAuthUser) {
+          await adminSupabase.auth.admin.deleteUser(
+            studentUserId
+          );
+        }
+
+        return {
+          success: false,
+          error: `Student profile could not be created: ${profileError.message}`,
+        };
+      }
+    }
+
+    /*
+     * ----------------------------------------------------
+     * CHECK EXISTING ENROLLMENT
+     * ----------------------------------------------------
+     */
+
+    const {
+      data: existingEnrollment,
+      error: enrollmentLookupError,
+    } = await adminSupabase
+      .from("enrollments")
+      .select("id, status")
+      .eq("student_id", studentUserId)
+      .eq("program_id", program.id)
+      .maybeSingle();
+
+    if (enrollmentLookupError) {
+      return {
+        success: false,
+        error: `Enrollment lookup failed: ${enrollmentLookupError.message}`,
+      };
+    }
+
+    /*
+     * ----------------------------------------------------
+     * ACTIVATE OR CREATE ENROLLMENT
+     * ----------------------------------------------------
+     */
+
+    if (existingEnrollment) {
+      const {
+        error: enrollmentUpdateError,
+      } = await adminSupabase
         .from("enrollments")
         .update({
           status: "active",
@@ -269,40 +315,39 @@ export async function approveApplication(
         })
         .eq("id", existingEnrollment.id);
 
-    if (enrollmentUpdateError) {
-      console.error(
-        "Approve Application: Enrollment update failed.",
-        enrollmentUpdateError.message
-      );
+      if (enrollmentUpdateError) {
+        return {
+          success: false,
+          error: `Enrollment could not be activated: ${enrollmentUpdateError.message}`,
+        };
+      }
+    } else {
+      const { error: enrollmentError } =
+        await adminSupabase
+          .from("enrollments")
+          .insert({
+            student_id: studentUserId,
+            program_id: program.id,
+            status: "active",
+          });
 
-      throw new Error(
-        `Enrollment could not be activated: ${enrollmentUpdateError.message}`
-      );
+      if (enrollmentError) {
+        return {
+          success: false,
+          error: `Student enrollment could not be created: ${enrollmentError.message}`,
+        };
+      }
     }
-  } else {
-    const { error: enrollmentError } =
-      await adminSupabase
-        .from("enrollments")
-        .insert({
-          student_id: studentUserId,
-          program_id: program.id,
-          status: "active",
-        });
 
-    if (enrollmentError) {
-      console.error(
-        "Approve Application: Enrollment creation failed.",
-        enrollmentError.message
-      );
+    /*
+     * ----------------------------------------------------
+     * APPROVE APPLICATION
+     * ----------------------------------------------------
+     */
 
-      throw new Error(
-        `Student enrollment could not be created: ${enrollmentError.message}`
-      );
-    }
-  }
-
-  const { error: applicationUpdateError } =
-    await supabase
+    const {
+      error: applicationUpdateError,
+    } = await supabase
       .from("applications")
       .update({
         status: "approved",
@@ -313,26 +358,77 @@ export async function approveApplication(
       .eq("id", applicationId)
       .eq("status", "pending");
 
-  if (applicationUpdateError) {
+    if (applicationUpdateError) {
+      return {
+        success: false,
+        error: `Application could not be approved: ${applicationUpdateError.message}`,
+      };
+    }
+
+    /*
+     * ----------------------------------------------------
+     * REFRESH ADMIN PAGES
+     * ----------------------------------------------------
+     */
+
+    revalidatePath("/admin/applications");
+    revalidatePath("/admin/students");
+    revalidatePath("/student");
+
+    /*
+     * ----------------------------------------------------
+     * RETURN TEMPORARY CREDENTIALS
+     *
+     * Password is NOT stored in database.
+     * It only returns to the admin browser once.
+     * ----------------------------------------------------
+     */
+
+    if (createdAuthUser && temporaryPassword) {
+      return {
+        success: true,
+        message:
+          "Student account created and application approved.",
+        credentials: {
+          name: application.full_name,
+          email,
+          password: temporaryPassword,
+        },
+      };
+    }
+
+    return {
+      success: true,
+      message:
+        "Application approved. A student account already existed for this email.",
+    };
+  } catch (error) {
     console.error(
-      "Approve Application: Application update failed.",
-      applicationUpdateError.message
+      "Approve Application Error:",
+      error
     );
 
-    throw new Error(
-      `Application could not be approved: ${applicationUpdateError.message}`
-    );
+    return {
+      success: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Something went wrong while approving the application.",
+    };
   }
-
-  revalidatePath("/admin/applications");
-  revalidatePath("/admin/students");
-  revalidatePath("/student");
 }
+
+/*
+ * --------------------------------------------------------
+ * REJECT APPLICATION
+ * --------------------------------------------------------
+ */
 
 export async function rejectApplication(
   formData: FormData
 ): Promise<void> {
-  const { user: adminUser } = await requireRole("admin");
+  const { user: adminUser } =
+    await requireRole("admin");
 
   const supabase = await createClient();
 
@@ -358,12 +454,15 @@ export async function rejectApplication(
     .eq("status", "pending");
 
   if (error) {
-    console.error("Reject Application Error:", {
-      message: error.message,
-      details: error.details,
-      hint: error.hint,
-      code: error.code,
-    });
+    console.error(
+      "Reject Application Error:",
+      {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code,
+      }
+    );
 
     throw new Error(
       `Reject Application Error: ${error.message}`
