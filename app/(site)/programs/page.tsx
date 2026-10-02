@@ -25,31 +25,39 @@ type Program = {
   created_at: string;
   updated_at: string;
 };
-
 function getProgramImage(program: Program) {
-  const text = `${program.slug} ${program.title}`.toLowerCase();
+  const slug = program.slug.toLowerCase().trim();
 
-  if (text.includes("full") && text.includes("stack")) {
-    return "/images/programs/full-stack.jpg";
-  }
+  const imageMap: Record<string, string> = {
+    "full-stack-web-development":
+      "/images/programs/full-stack.jpg",
 
-  if (text.includes("web")) {
-    return "/images/programs/web-development.jpg";
-  }
+    "web-development":
+      "/images/programs/web-development.jpg",
 
-  if (text.includes("digital") && text.includes("marketing")) {
-    return "/images/programs/digital-marketing.jpg";
-  }
+    "frontend-web-development":
+      "/images/programs/frontend-web-development.jpg",
 
-  if (text.includes("graphic") || text.includes("design")) {
-    return "/images/programs/graphic-design.jpg";
-  }
+    "digital-marketing":
+      "/images/programs/digital-marketing.jpg",
 
-  if (text.includes("seo")) {
-    return "/images/programs/seo.jpg";
-  }
+    "graphic-design":
+      "/images/programs/graphic-design.jpg",
 
-  return "/images/programs/web-development.jpg";
+    "seo":
+      "/images/programs/seo.jpg",
+
+    "meta-ads-fb-ads":
+      "/images/programs/meta-ads.jpg",
+
+    "content":
+      "/images/programs/content-writing.jpg",
+  };
+
+  return (
+    imageMap[slug] ||
+    "/images/programs/web-development.jpg"
+  );
 }
 
 export default async function Page({
