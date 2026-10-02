@@ -96,11 +96,11 @@ export function LoginForm({
 
     const supabase = createClient();
 
-    const { error } =
-      await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth/callback?next=/student/set-password`,
-      });
-
+ const { error } =
+  await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo:
+      "https://techlanceacademy.site/auth/callback?next=/student/set-password",
+  });
     setResetLoading(false);
 
     if (error) {
