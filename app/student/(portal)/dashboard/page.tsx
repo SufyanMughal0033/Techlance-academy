@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
@@ -1076,22 +1078,37 @@ export default async function Page() {
 
       {/* Student Information */}
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0">
-          <CardTitle className="text-base">
-            Student Information
-          </CardTitle>
+        <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <CardTitle className="text-base">
+              Student Information
+            </CardTitle>
 
-          <Badge
-            variant={
-              profile.is_active
-                ? "default"
-                : "destructive"
-            }
-          >
-            {profile.is_active
-              ? "Active"
-              : "Inactive"}
-          </Badge>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Manage your account information and password.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <Link
+              href="/student/change-password"
+              className="inline-flex items-center justify-center rounded-lg border border-primary/40 px-3 py-2 text-xs font-medium text-primary transition-colors hover:bg-primary/10"
+            >
+              Change Password
+            </Link>
+
+            <Badge
+              variant={
+                profile.is_active
+                  ? "default"
+                  : "destructive"
+              }
+            >
+              {profile.is_active
+                ? "Active"
+                : "Inactive"}
+            </Badge>
+          </div>
         </CardHeader>
 
         <CardContent>

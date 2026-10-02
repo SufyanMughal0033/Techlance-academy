@@ -4,13 +4,20 @@ import * as React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import {
+  Eye,
+  EyeOff,
+  Loader2,
+} from "lucide-react";
 
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { loginSchema, type LoginInput } from "@/schemas/auth";
+import {
+  loginSchema,
+  type LoginInput,
+} from "@/schemas/auth";
 
 interface LoginFormProps {
   action: (
@@ -40,17 +47,21 @@ export function LoginForm({
   const [resetMessage, setResetMessage] =
     React.useState<string | null>(null);
 
-const {
-  register,
-  handleSubmit,
-  formState: { errors, isSubmitting },
-} = useForm<LoginInput>({
-  resolver: zodResolver(loginSchema),
-  defaultValues: {
-    email: "",
-    password: "",
-  },
-});
+  const [showPassword, setShowPassword] =
+    React.useState(false);
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<LoginInput>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+    },
+  });
+
   async function onSubmit(values: LoginInput) {
     setServerError(null);
 
@@ -169,7 +180,9 @@ const {
       className="flex flex-col gap-4"
     >
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="email">Email</Label>
+        <Label htmlFor="email">
+          Email
+        </Label>
 
         <Input
           id="email"
@@ -207,14 +220,37 @@ const {
           </button>
         </div>
 
-        <Input
-          id="password"
-          type="password"
-          autoComplete="current-password"
-          placeholder="••••••••"
-          aria-invalid={!!errors.password}
-          {...register("password")}
-        />
+        {/* Password field with Show/Hide button */}
+        <div className="relative">
+          <Input
+            id="password"
+            type={showPassword ? "text" : "password"}
+            autoComplete="current-password"
+            placeholder="••••••••"
+            aria-invalid={!!errors.password}
+            className="pr-10"
+            {...register("password")}
+          />
+
+          <button
+            type="button"
+            onClick={() =>
+              setShowPassword((current) => !current)
+            }
+            className="absolute right-0 top-0 flex h-full w-10 items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
+            aria-label={
+              showPassword
+                ? "Hide password"
+                : "Show password"
+            }
+          >
+            {showPassword ? (
+              <EyeOff className="h-4 w-4" />
+            ) : (
+              <Eye className="h-4 w-4" />
+            )}
+          </button>
+        </div>
 
         {errors.password && (
           <p className="text-xs text-destructive">
@@ -238,7 +274,7 @@ const {
         className="mt-2"
       >
         {isSubmitting && (
-          <Loader2 className="h-4 w-4 animate-spin" />
+          <Loader2 className="h-4 w-4" />
         )}
 
         {isSubmitting

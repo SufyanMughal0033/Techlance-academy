@@ -471,3 +471,94 @@ export async function rejectApplication(
 
   revalidatePath("/admin/applications");
 }
+export type ResetStudentPasswordResult = {
+  success: boolean;
+  message?: string;
+  error?: string;
+  credentials?: {
+    name: string;
+    email: string;
+    password: string;
+  };
+};
+
+export async function resetStudentPassword(
+  applicationId: string
+): Promise<ResetStudentPasswordResult> {
+  try {
+    await requireRole("admin");
+
+    const supabase = await createClient();
+    const adminSupabase = createAdminClient();
+
+    // Get approved application
+    const { data: application, error: applicationError } = await supabase
+      .from("applications")
+      .select("id, full_name, email, status, student_id")
+      .eq("id", applicationId)
+      .single();
+
+    if (applicationError || !application) {
+      return {
+        success: false,
+        error: "Application not found.",
+      };
+    }
+
+    if (application.status !== "approved") {
+      return {
+        success: false,
+        error: "This application is not approved yet.",
+      };
+    }
+
+    if (!application.student_id) {
+      return {
+        success: false,
+        error: "This student does not have an Auth account yet.",
+      };
+    }
+
+    // Generate a completely new temporary password
+    const temporaryPassword = generateTemporaryPassword();
+
+    // Update Supabase Auth password
+    const { error: updateError } =
+      await adminSupabase.auth.admin.updateUserById(
+        application.student_id,
+        {
+          password: temporaryPassword,
+        }
+      );
+
+    if (updateError) {
+      return {
+        success: false,
+        error: updateError.message || "Could not generate new password.",
+      };
+    }
+
+    revalidatePath("/admin/applications");
+    revalidatePath("/admin/students");
+
+    return {
+      success: true,
+      message: "New temporary password generated successfully.",
+      credentials: {
+        name: application.full_name,
+        email: application.email,
+        password: temporaryPassword,
+      },
+    };
+  } catch (error) {
+    console.error("resetStudentPassword error:", error);
+
+    return {
+      success: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Something went wrong while generating the password.",
+    };
+  }
+}

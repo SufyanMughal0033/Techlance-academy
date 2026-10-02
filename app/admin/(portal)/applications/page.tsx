@@ -2,7 +2,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { createClient } from "@/lib/supabase/server";
 import { ApproveApplicationButton } from "@/components/admin/approve-application-button";
 import { rejectApplication } from "./actions";
-
+import { ResetStudentPasswordButton } from "@/components/admin/reset-student-password-button";
 export const metadata = {
   title: "Applications",
 };
@@ -367,9 +367,17 @@ export default async function Page() {
                             </>
                           ) : application.status ===
                             "approved" ? (
-                            <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                              Admission Approved
-                            </span>
+                           <div className="flex flex-col items-end gap-2">
+  <span className="text-emerald-400">
+    Admission Approved
+  </span>
+
+  {application.student_id && (
+    <ResetStudentPasswordButton
+      applicationId={application.id}
+    />
+  )}
+</div>
                           ) : (
                             <span className="text-xs text-muted-foreground">
                               Application Rejected
