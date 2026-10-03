@@ -132,7 +132,11 @@ export default async function CertificatesPage() {
           </p>
         </div>
 
-        <form action={createCertificate} className="grid gap-5">
+        <form
+          action={createCertificate}
+          className="grid gap-5"
+        >
+          {/* Student + Program */}
           <div className="grid gap-5 md:grid-cols-2">
             {/* Student */}
             <div className="space-y-2">
@@ -232,22 +236,27 @@ export default async function CertificatesPage() {
             </div>
           </div>
 
-          {/* Certificate URL */}
+          {/* PDF Upload */}
           <div className="space-y-2">
             <label
-              htmlFor="certificate_url"
+              htmlFor="certificate_file"
               className="text-sm font-medium"
             >
-              Certificate URL
+              Certificate PDF
             </label>
 
             <input
-              id="certificate_url"
-              name="certificate_url"
-              type="url"
-              placeholder="https://..."
-              className="w-full rounded-lg border bg-background px-3 py-2 text-sm"
+              id="certificate_file"
+              name="certificate_file"
+              type="file"
+              accept="application/pdf,.pdf"
+              className="block w-full cursor-pointer rounded-lg border bg-background px-3 py-2 text-sm"
             />
+
+            <p className="text-xs text-muted-foreground">
+              Upload the student's certificate as a PDF. Maximum file size:
+              10 MB.
+            </p>
           </div>
 
           {/* Description */}
@@ -268,6 +277,7 @@ export default async function CertificatesPage() {
             />
           </div>
 
+          {/* Submit */}
           <div>
             <button
               type="submit"
@@ -370,7 +380,7 @@ export default async function CertificatesPage() {
                         </p>
                       )}
 
-                      {/* Certificate URL */}
+                      {/* PDF */}
                       {certificate.certificate_url && (
                         <div className="mt-3">
                           <Link
@@ -379,9 +389,15 @@ export default async function CertificatesPage() {
                             rel="noopener noreferrer"
                             className="text-sm font-medium text-primary hover:underline"
                           >
-                            View Certificate
+                            View / Download Certificate PDF
                           </Link>
                         </div>
+                      )}
+
+                      {!certificate.certificate_url && (
+                        <p className="mt-3 text-xs text-amber-600">
+                          No certificate PDF uploaded.
+                        </p>
                       )}
                     </div>
 
@@ -426,6 +442,7 @@ export default async function CertificatesPage() {
                             </div>
                           </div>
 
+                          {/* Edit Form */}
                           <form
                             action={updateCertificate}
                             className="grid gap-4"
@@ -502,7 +519,6 @@ export default async function CertificatesPage() {
 
                             {/* Issue Date + Status */}
                             <div className="grid gap-4 md:grid-cols-2">
-                              {/* Issue Date */}
                               <div className="space-y-2">
                                 <label
                                   htmlFor={`edit-date-${certificate.id}`}
@@ -521,7 +537,6 @@ export default async function CertificatesPage() {
                                 />
                               </div>
 
-                              {/* Status */}
                               <div className="space-y-2">
                                 <label
                                   htmlFor={`edit-status-${certificate.id}`}
@@ -551,25 +566,37 @@ export default async function CertificatesPage() {
                               </div>
                             </div>
 
-                            {/* Certificate URL */}
+                            {/* Replace PDF */}
                             <div className="space-y-2">
                               <label
-                                htmlFor={`edit-url-${certificate.id}`}
+                                htmlFor={`edit-file-${certificate.id}`}
                                 className="text-sm font-medium"
                               >
-                                Certificate URL
+                                Replace Certificate PDF
                               </label>
 
                               <input
-                                id={`edit-url-${certificate.id}`}
-                                name="certificate_url"
-                                type="url"
-                                defaultValue={
-                                  certificate.certificate_url ?? ""
-                                }
-                                placeholder="https://..."
-                                className="w-full rounded-lg border bg-background px-3 py-2 text-sm"
+                                id={`edit-file-${certificate.id}`}
+                                name="certificate_file"
+                                type="file"
+                                accept="application/pdf,.pdf"
+                                className="block w-full cursor-pointer rounded-lg border bg-background px-3 py-2 text-sm"
                               />
+
+                              <p className="text-xs text-muted-foreground">
+                                Leave empty to keep the current PDF.
+                              </p>
+
+                              {certificate.certificate_url && (
+                                <Link
+                                  href={certificate.certificate_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-block text-xs font-medium text-primary hover:underline"
+                                >
+                                  Open current PDF
+                                </Link>
+                              )}
                             </div>
 
                             {/* Description */}
@@ -593,6 +620,7 @@ export default async function CertificatesPage() {
                               />
                             </div>
 
+                            {/* Save */}
                             <div className="flex gap-2">
                               <button
                                 type="submit"

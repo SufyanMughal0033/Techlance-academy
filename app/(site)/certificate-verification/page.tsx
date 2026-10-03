@@ -1,27 +1,112 @@
+"use client";
+
+import * as React from "react";
 import Link from "next/link";
 import {
   ArrowRight,
   BadgeCheck,
   CalendarDays,
   CheckCircle2,
+  Download,
   FileCheck2,
   GraduationCap,
-  Info,
   Search,
   ShieldCheck,
   Sparkles,
   UserRound,
   XCircle,
+  Loader2,
 } from "lucide-react";
+
+import { createClient } from "@/lib/supabase/client";
 import { PageHero } from "@/components/marketing/page-hero";
 
-export const metadata = {
-  title: "Certificate Verification",
-  description:
-    "Verify the authenticity of a Techlance Academy certificate using its certificate ID.",
+type Certificate = {
+  certificate_number: string;
+  issue_date: string;
+  title: string;
+  description: string | null;
+  certificate_url: string | null;
+  status: string;
+  student_name: string | null;
+  program_name: string | null;
 };
 
 export default function CertificateVerificationPage() {
+  const supabase = React.useMemo(() => createClient(), []);
+
+  const [certificateNumber, setCertificateNumber] = React.useState("");
+  const [certificate, setCertificate] =
+    React.useState<Certificate | null>(null);
+
+  const [loading, setLoading] = React.useState(false);
+  const [searched, setSearched] = React.useState(false);
+  const [error, setError] = React.useState("");
+
+  async function handleVerify(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const number = certificateNumber.trim();
+
+    if (!number) {
+      setError("Please enter a certificate ID.");
+      setCertificate(null);
+      setSearched(true);
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+    setCertificate(null);
+    setSearched(true);
+
+    const { data, error: rpcError } = await (supabase.rpc as any)(
+      "verify_certificate",
+      {
+        p_certificate_number: number,
+      }
+    );
+
+    if (rpcError) {
+      console.error("Certificate verification error:", rpcError);
+
+      setError(
+        "Unable to verify this certificate right now. Please try again."
+      );
+
+      setLoading(false);
+      return;
+    }
+
+    if (!data || !Array.isArray(data) || data.length === 0) {
+      setError(
+        "No valid certificate was found with this certificate ID."
+      );
+
+      setLoading(false);
+      return;
+    }
+
+    setCertificate(data[0]);
+    setLoading(false);
+  }
+
+  function formatDate(dateString: string) {
+    if (!dateString) return "—";
+
+    const date = new Date(dateString);
+
+    if (Number.isNaN(date.getTime())) {
+      return dateString;
+    }
+
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  }
+
   return (
     <>
       <PageHero
@@ -56,7 +141,7 @@ export default function CertificateVerificationPage() {
 
               {/* Form */}
               <div className="p-6 sm:p-10">
-                <form className="space-y-5">
+                <form onSubmit={handleVerify} className="space-y-5">
                   <div>
                     <label
                       htmlFor="certificate-id"
@@ -72,7 +157,12 @@ export default function CertificateVerificationPage() {
                         id="certificate-id"
                         name="certificate-id"
                         type="text"
-                        placeholder="e.g. TLA-2026-000123"
+                        value={certificateNumber}
+                        onChange={(event) =>
+                          setCertificateNumber(event.target.value)
+                        }
+                        placeholder="e.g. TLC-2026-0001"
+                        autoComplete="off"
                         className="h-13 w-full rounded-xl border border-border bg-background pl-12 pr-4 text-sm outline-none transition placeholder:text-muted-foreground/60 focus:border-primary focus:ring-2 focus:ring-primary/10"
                       />
                     </div>
@@ -85,18 +175,179 @@ export default function CertificateVerificationPage() {
 
                   <button
                     type="submit"
-                    className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground transition hover:-translate-y-0.5 hover:opacity-90"
+                    disabled={loading}
+                    className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground transition hover:-translate-y-0.5 hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    <Search className="h-4 w-4" />
-                    Verify Certificate
+                    {loading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Verifying...
+                      </>
+                    ) : (
+                      <>
+                        <Search className="h-4 w-4" />
+                        Verify Certificate
+                      </>
+                    )}
                   </button>
                 </form>
               </div>
             </div>
 
+            {/* Loading */}
+            {loading && (
+              <div className="mt-5 rounded-2xl border border-border bg-card p-5 text-center">
+                <p className="text-sm text-muted-foreground">
+                  Checking the Techlance Academy certificate database...
+                </p>
+              </div>
+            )}
+
+            {/* Error */}
+            {!loading && searched && error && (
+              <div className="mt-5 flex gap-4 rounded-2xl border border-red-500/20 bg-red-500/[0.04] p-5">
+                <XCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-600 dark:text-red-400" />
+
+                <div>
+                  <h3 className="text-sm font-semibold">
+                    Certificate not found
+                  </h3>
+
+                  <p className="mt-1 text-xs leading-6 text-muted-foreground">
+                    {error}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Verified Certificate */}
+            {!loading && certificate && (
+              <section className="mt-8">
+                <div className="overflow-hidden rounded-3xl border border-emerald-500/20 bg-card shadow-sm">
+                  {/* Result Header */}
+                  <div className="flex flex-col gap-5 border-b border-border bg-emerald-500/[0.05] p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8">
+                    <div className="flex items-center gap-4">
+                      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                        <BadgeCheck className="h-7 w-7" />
+                      </div>
+
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                          Verification status
+                        </p>
+
+                        <h3 className="mt-1 text-xl font-bold">
+                          Certificate Verified
+                        </h3>
+                      </div>
+                    </div>
+
+                    <span className="inline-flex w-fit items-center gap-2 rounded-full bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      Valid Certificate
+                    </span>
+                  </div>
+
+                  {/* Result Details */}
+                  <div className="grid gap-6 p-6 sm:grid-cols-2 sm:p-8">
+                    {/* Student */}
+                    <div className="flex gap-3">
+                      <UserRound className="mt-0.5 h-5 w-5 text-muted-foreground" />
+
+                      <div>
+                        <p className="text-xs text-muted-foreground">
+                          Student Name
+                        </p>
+
+                        <p className="mt-1 text-sm font-semibold">
+                          {certificate.student_name || "—"}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Program */}
+                    <div className="flex gap-3">
+                      <GraduationCap className="mt-0.5 h-5 w-5 text-muted-foreground" />
+
+                      <div>
+                        <p className="text-xs text-muted-foreground">
+                          Program
+                        </p>
+
+                        <p className="mt-1 text-sm font-semibold">
+                          {certificate.program_name ||
+                            certificate.title ||
+                            "—"}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Issue Date */}
+                    <div className="flex gap-3">
+                      <CalendarDays className="mt-0.5 h-5 w-5 text-muted-foreground" />
+
+                      <div>
+                        <p className="text-xs text-muted-foreground">
+                          Issue Date
+                        </p>
+
+                        <p className="mt-1 text-sm font-semibold">
+                          {formatDate(certificate.issue_date)}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Certificate ID */}
+                    <div className="flex gap-3">
+                      <FileCheck2 className="mt-0.5 h-5 w-5 text-muted-foreground" />
+
+                      <div>
+                        <p className="text-xs text-muted-foreground">
+                          Certificate ID
+                        </p>
+
+                        <p className="mt-1 text-sm font-semibold">
+                          {certificate.certificate_number}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Description */}
+                  {certificate.description && (
+                    <div className="border-t border-border px-6 py-5 sm:px-8">
+                      <p className="text-xs text-muted-foreground">
+                        Certificate Description
+                      </p>
+
+                      <p className="mt-2 text-sm leading-7">
+                        {certificate.description}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Download */}
+                  {certificate.certificate_url && (
+                    <div className="border-t border-border px-6 py-5 sm:px-8">
+                      <a
+                        href={certificate.certificate_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        download
+                        className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:-translate-y-0.5 hover:opacity-90 sm:w-auto"
+                      >
+                        <Download className="h-4 w-4" />
+                        Download Certificate PDF
+                      </a>
+                    </div>
+                  )}
+                </div>
+              </section>
+            )}
+
             {/* Privacy Note */}
             <div className="mt-5 flex gap-3 rounded-2xl border border-border bg-muted/30 p-4">
-              <Info className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+              <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
 
               <p className="text-xs leading-6 text-muted-foreground">
                 Certificate verification only displays information necessary
@@ -126,7 +377,6 @@ export default function CertificateVerificationPage() {
             </div>
 
             <div className="mt-10 grid gap-5 md:grid-cols-3">
-              {/* Step 1 */}
               <div className="rounded-2xl border border-border bg-card p-6">
                 <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-sm font-bold text-primary">
                   01
@@ -137,12 +387,11 @@ export default function CertificateVerificationPage() {
                 </h3>
 
                 <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                  Locate the unique certificate ID printed on the student&apos;s
-                  Techlance Academy certificate.
+                  Locate the unique certificate ID printed on the Techlance
+                  Academy certificate.
                 </p>
               </div>
 
-              {/* Step 2 */}
               <div className="rounded-2xl border border-border bg-card p-6">
                 <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-sm font-bold text-primary">
                   02
@@ -158,7 +407,6 @@ export default function CertificateVerificationPage() {
                 </p>
               </div>
 
-              {/* Step 3 */}
               <div className="rounded-2xl border border-border bg-card p-6">
                 <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-sm font-bold text-primary">
                   03
@@ -169,139 +417,10 @@ export default function CertificateVerificationPage() {
                 </h3>
 
                 <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                  The system will show whether the certificate is valid,
-                  revoked, or not found.
+                  The system will show whether the certificate is valid or
+                  not found.
                 </p>
               </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Example Verification Result */}
-        <section className="mt-16">
-          <div className="mx-auto max-w-4xl">
-            <div className="mb-6 text-center">
-              <p className="text-sm font-semibold text-primary">
-                Verification result
-              </p>
-
-              <h2 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
-                What a verified certificate looks like
-              </h2>
-            </div>
-
-            <div className="overflow-hidden rounded-3xl border border-emerald-500/20 bg-card">
-              {/* Result Header */}
-              <div className="flex flex-col gap-5 border-b border-border bg-emerald-500/[0.05] p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8">
-                <div className="flex items-center gap-4">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                    <BadgeCheck className="h-7 w-7" />
-                  </div>
-
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-                      Verification status
-                    </p>
-
-                    <h3 className="mt-1 text-xl font-bold">
-                      Certificate Verified
-                    </h3>
-                  </div>
-                </div>
-
-                <span className="inline-flex w-fit items-center gap-2 rounded-full bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                  <CheckCircle2 className="h-3.5 w-3.5" />
-                  Valid Certificate
-                </span>
-              </div>
-
-              {/* Result Details */}
-              <div className="grid gap-6 p-6 sm:grid-cols-2 sm:p-8">
-                <div className="flex gap-3">
-                  <UserRound className="mt-0.5 h-5 w-5 text-muted-foreground" />
-
-                  <div>
-                    <p className="text-xs text-muted-foreground">
-                      Student Name
-                    </p>
-
-                    <p className="mt-1 text-sm font-semibold">
-                      Muhammad Ahmed
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex gap-3">
-                  <GraduationCap className="mt-0.5 h-5 w-5 text-muted-foreground" />
-
-                  <div>
-                    <p className="text-xs text-muted-foreground">
-                      Program
-                    </p>
-
-                    <p className="mt-1 text-sm font-semibold">
-                      Full Stack Web Development
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex gap-3">
-                  <CalendarDays className="mt-0.5 h-5 w-5 text-muted-foreground" />
-
-                  <div>
-                    <p className="text-xs text-muted-foreground">
-                      Issue Date
-                    </p>
-
-                    <p className="mt-1 text-sm font-semibold">
-                      September 24, 2026
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex gap-3">
-                  <FileCheck2 className="mt-0.5 h-5 w-5 text-muted-foreground" />
-
-                  <div>
-                    <p className="text-xs text-muted-foreground">
-                      Certificate ID
-                    </p>
-
-                    <p className="mt-1 text-sm font-semibold">
-                      TLA-2026-000123
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Result Footer */}
-              <div className="border-t border-border px-6 py-5 sm:px-8">
-                <p className="text-xs leading-6 text-muted-foreground">
-                  This example demonstrates the information that may be shown
-                  when a certificate is successfully verified. Actual results
-                  will be retrieved from the Techlance Academy certificate
-                  database.
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Invalid Example */}
-        <section className="mx-auto mt-8 max-w-4xl">
-          <div className="flex gap-4 rounded-2xl border border-amber-500/20 bg-amber-500/[0.04] p-5">
-            <XCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
-
-            <div>
-              <h3 className="text-sm font-semibold">
-                Certificate not found or revoked?
-              </h3>
-
-              <p className="mt-1 text-xs leading-6 text-muted-foreground">
-                If a certificate ID cannot be verified, check that the ID was
-                entered correctly. If the issue continues, contact Techlance
-                Academy for assistance.
-              </p>
             </div>
           </div>
         </section>
