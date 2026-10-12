@@ -1,5 +1,6 @@
+
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Download, FileText } from "lucide-react";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { requireRole } from "@/lib/auth";
@@ -12,10 +13,16 @@ export const metadata = {
 function formatDate(date: string | null) {
   if (!date) return "No due date";
 
+  const parsedDate = new Date(date);
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return "Invalid date";
+  }
+
   return new Intl.DateTimeFormat("en-PK", {
     dateStyle: "medium",
     timeStyle: "short",
-  }).format(new Date(date));
+  }).format(parsedDate);
 }
 
 function getStatusLabel(status: string | undefined) {
@@ -60,6 +67,7 @@ type AssignmentRecord = {
   assignment_order: number;
   status: string;
   module_id: string;
+  attachment_url: string | null;
 };
 
 type SubmissionRecord = {
@@ -74,9 +82,7 @@ export default async function Page() {
   const { user } = await requireRole("student");
   const supabase = await createClient();
 
-  // ---------------------------------------------------------
-  // 1. Get student's active enrollments
-  // ---------------------------------------------------------
+  // 1. Get the student's active enrollments.
   const { data: enrollments, error: enrollmentError } = await supabase
     .from("enrollments")
     .select("program_id")
@@ -86,8 +92,6 @@ export default async function Page() {
   if (enrollmentError) {
     console.error("Student Assignments - Enrollment Error:", {
       message: enrollmentError.message,
-      details: enrollmentError.details,
-      hint: enrollmentError.hint,
       code: enrollmentError.code,
     });
 
@@ -97,16 +101,15 @@ export default async function Page() {
           <h2 className="font-display text-xl font-semibold text-foreground">
             Assignments
           </h2>
-
           <p className="mt-1 max-w-xl text-sm text-muted-foreground">
-            Assignments due, submitted, and reviewed, with marks and feedback
-            once graded.
+            View assignments, download resources, submit your work, and
+            check your results.
           </p>
         </div>
 
         <Card>
           <CardContent className="py-14 text-center text-sm text-destructive">
-            Unable to load your enrolled programs.
+            Unable to load your enrolled programs. Please try again later.
           </CardContent>
         </Card>
       </div>
@@ -117,9 +120,7 @@ export default async function Page() {
     .map((enrollment) => enrollment.program_id)
     .filter((id): id is string => Boolean(id));
 
-  // ---------------------------------------------------------
-  // 2. Get modules belonging to enrolled programs
-  // ---------------------------------------------------------
+  // 2. Get active modules belonging to the enrolled programs.
   let modules: ModuleRecord[] = [];
 
   if (programIds.length > 0) {
@@ -133,8 +134,6 @@ export default async function Page() {
     if (moduleError) {
       console.error("Student Assignments - Module Error:", {
         message: moduleError.message,
-        details: moduleError.details,
-        hint: moduleError.hint,
         code: moduleError.code,
       });
     } else {
@@ -148,9 +147,7 @@ export default async function Page() {
     modules.map((module) => [module.id, module])
   );
 
-  // ---------------------------------------------------------
-  // 3. Get published assignments for those modules
-  // ---------------------------------------------------------
+  // 3. Get published assignments and their attachment URLs.
   let assignments: AssignmentRecord[] = [];
 
   if (moduleIds.length > 0) {
@@ -167,7 +164,8 @@ export default async function Page() {
             max_marks,
             assignment_order,
             status,
-            module_id
+            module_id,
+            attachment_url
           `
         )
         .in("module_id", moduleIds)
@@ -183,8 +181,6 @@ export default async function Page() {
     if (assignmentError) {
       console.error("Student Assignments - Assignment Error:", {
         message: assignmentError.message,
-        details: assignmentError.details,
-        hint: assignmentError.hint,
         code: assignmentError.code,
       });
     } else {
@@ -192,9 +188,7 @@ export default async function Page() {
     }
   }
 
-  // ---------------------------------------------------------
-  // 4. Get student's submissions
-  // ---------------------------------------------------------
+  // 4. Get the student's submissions for these assignments.
   const assignmentIds = assignments.map(
     (assignment) => assignment.id
   );
@@ -205,17 +199,13 @@ export default async function Page() {
     const { data: submissionData, error: submissionError } =
       await supabase
         .from("student_submissions")
-        .select(
-          "assignment_id, status, marks, feedback, submitted_at"
-        )
+        .select("assignment_id, status, marks, feedback, submitted_at")
         .eq("student_id", user.id)
         .in("assignment_id", assignmentIds);
 
     if (submissionError) {
       console.error("Student Assignments - Submission Error:", {
         message: submissionError.message,
-        details: submissionError.details,
-        hint: submissionError.hint,
         code: submissionError.code,
       });
     } else {
@@ -230,9 +220,7 @@ export default async function Page() {
     ])
   );
 
-  // ---------------------------------------------------------
-  // 5. Render
-  // ---------------------------------------------------------
+  // 5. Render the assignments.
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -241,45 +229,45 @@ export default async function Page() {
         </h2>
 
         <p className="mt-1 max-w-xl text-sm text-muted-foreground">
-          Assignments due, submitted, and reviewed, with marks and feedback
-          once graded.
+          View your assignments, download instructor resources, submit
+          your work, and check your marks and feedback.
         </p>
       </div>
 
       {assignments.length === 0 ? (
         <Card>
           <CardContent className="py-14 text-center">
-            <p className="text-sm font-medium text-foreground">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+              <FileText className="h-6 w-6 text-muted-foreground" />
+            </div>
+
+            <p className="mt-4 text-sm font-semibold text-foreground">
               No assignments available
             </p>
 
-            <p className="mt-1 text-sm text-muted-foreground">
-              Your instructor has not published any assignments for your
-              enrolled program yet.
+            <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
+              No published assignments were found for your active
+              enrolled programs. Please check again later.
             </p>
           </CardContent>
         </Card>
       ) : (
         <div className="grid gap-4">
           {assignments.map((assignment) => {
-            const submission = submissionMap.get(
-              assignment.id
-            );
+            const submission = submissionMap.get(assignment.id);
 
             const submissionStatus =
               submission?.status ?? "not_submitted";
 
-            const module = moduleMap.get(
-              assignment.module_id
-            );
+            const module = moduleMap.get(assignment.module_id);
 
             return (
               <Card key={assignment.id}>
                 <CardContent className="p-5">
                   <div className="flex flex-col gap-4">
-                    {/* Header */}
+                    {/* Assignment header */}
                     <div className="flex flex-col justify-between gap-3 md:flex-row md:items-start">
-                      <div>
+                      <div className="min-w-0">
                         <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                           {module?.title ?? "Module"}
                         </p>
@@ -289,14 +277,14 @@ export default async function Page() {
                         </h3>
 
                         {assignment.description && (
-                          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
+                          <p className="mt-2 max-w-2xl whitespace-pre-wrap text-sm leading-6 text-muted-foreground">
                             {assignment.description}
                           </p>
                         )}
                       </div>
 
                       <span
-                        className={`inline-flex w-fit rounded-full px-3 py-1 text-xs font-medium ${getStatusClass(
+                        className={`inline-flex w-fit shrink-0 rounded-full px-3 py-1 text-xs font-medium ${getStatusClass(
                           submissionStatus
                         )}`}
                       >
@@ -304,13 +292,12 @@ export default async function Page() {
                       </span>
                     </div>
 
-                    {/* Assignment Information */}
+                    {/* Assignment information */}
                     <div className="grid gap-3 border-t pt-4 text-sm sm:grid-cols-3">
                       <div>
                         <p className="text-xs text-muted-foreground">
                           Due date
                         </p>
-
                         <p className="mt-1 font-medium text-foreground">
                           {formatDate(assignment.due_date)}
                         </p>
@@ -320,7 +307,6 @@ export default async function Page() {
                         <p className="text-xs text-muted-foreground">
                           Maximum marks
                         </p>
-
                         <p className="mt-1 font-medium text-foreground">
                           {assignment.max_marks}
                         </p>
@@ -330,7 +316,6 @@ export default async function Page() {
                         <p className="text-xs text-muted-foreground">
                           Result
                         </p>
-
                         <p className="mt-1 font-medium text-foreground">
                           {submission?.marks !== null &&
                           submission?.marks !== undefined
@@ -340,45 +325,75 @@ export default async function Page() {
                       </div>
                     </div>
 
-                    {/* Instructions */}
+                    {/* Assignment instructions */}
                     {assignment.instructions && (
-                      <div className="rounded-lg bg-muted/50 p-4">
-                        <p className="text-xs font-medium text-foreground">
+                      <div className="rounded-xl border border-border bg-muted/30 p-4">
+                        <p className="text-sm font-semibold text-foreground">
                           Instructions
                         </p>
 
-                        <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-muted-foreground">
+                        <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-muted-foreground">
                           {assignment.instructions}
                         </p>
                       </div>
                     )}
 
-                    {/* Feedback */}
+                    {/* Assignment attachment */}
+                    {assignment.attachment_url && (
+                      <div className="rounded-xl border border-border bg-muted/20 p-4 sm:p-5">
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                            <FileText className="h-5 w-5" />
+                          </div>
+
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-semibold text-foreground">
+                              Assignment Resource
+                            </p>
+                            <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                              Your instructor has attached a resource
+                              for this assignment.
+                            </p>
+                          </div>
+
+                          <a
+                            href={assignment.attachment_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
+                          >
+                            <Download className="h-4 w-4" />
+                            Download File
+                          </a>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Instructor feedback */}
                     {submission?.feedback && (
-                      <div className="rounded-lg border p-4">
-                        <p className="text-xs font-medium text-foreground">
+                      <div className="rounded-xl border border-border p-4">
+                        <p className="text-sm font-semibold text-foreground">
                           Instructor Feedback
                         </p>
 
-                        <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-muted-foreground">
+                        <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-muted-foreground">
                           {submission.feedback}
                         </p>
                       </div>
                     )}
 
-                    {/* Submitted Date */}
+                    {/* Submission date */}
                     {submission?.submitted_at && (
                       <p className="text-xs text-muted-foreground">
-                        Submitted:{" "}
-                        {formatDate(submission.submitted_at)}
+                        Submitted: {formatDate(submission.submitted_at)}
                       </p>
                     )}
 
-                    {/* View Assignment */}
+                    {/* View assignment */}
                     <div className="flex justify-end border-t pt-4">
                       <Link
                         href={`/student/assignments/${assignment.id}`}
-                        className="inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+                        className="inline-flex items-center gap-2 rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
                       >
                         View Assignment
                         <ArrowRight className="h-4 w-4" />

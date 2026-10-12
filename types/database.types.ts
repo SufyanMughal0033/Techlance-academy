@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "14.17"
   }
   public: {
     Tables: {
@@ -895,7 +895,9 @@ export type Database = {
           marks: number | null
           status: string
           student_id: string
+          submission_pdf_path: string | null
           submission_text: string | null
+          submission_url: string | null
           submitted_at: string | null
           updated_at: string
         }
@@ -908,7 +910,9 @@ export type Database = {
           marks?: number | null
           status?: string
           student_id: string
+          submission_pdf_path?: string | null
           submission_text?: string | null
+          submission_url?: string | null
           submitted_at?: string | null
           updated_at?: string
         }
@@ -921,7 +925,9 @@ export type Database = {
           marks?: number | null
           status?: string
           student_id?: string
+          submission_pdf_path?: string | null
           submission_text?: string | null
+          submission_url?: string | null
           submitted_at?: string | null
           updated_at?: string
         }
@@ -1289,6 +1295,19 @@ export type Database = {
       generate_certificate_number: { Args: never; Returns: string }
       generate_student_id: { Args: never; Returns: string }
       is_admin: { Args: never; Returns: boolean }
+      verify_certificate: {
+        Args: { p_certificate_number: string }
+        Returns: {
+          certificate_number: string
+          certificate_url: string
+          description: string
+          issue_date: string
+          program_name: string
+          status: string
+          student_name: string
+          title: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

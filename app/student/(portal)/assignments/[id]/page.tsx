@@ -1,3 +1,4 @@
+
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
@@ -44,9 +45,6 @@ export default async function AssignmentDetailPage({
   const { user } = await requireRole("student");
   const supabase = await createClient();
 
-  /*
-   * Get assignment
-   */
   const { data: assignment, error: assignmentError } =
     await supabase
       .from("assignments")
@@ -73,7 +71,6 @@ export default async function AssignmentDetailPage({
   }
 
   const moduleData = assignment.module;
-
   const module = Array.isArray(moduleData)
     ? moduleData[0]
     : moduleData;
@@ -82,9 +79,6 @@ export default async function AssignmentDetailPage({
     notFound();
   }
 
-  /*
-   * Verify student's enrollment
-   */
   const { data: enrollment } = await supabase
     .from("enrollments")
     .select("id")
@@ -97,23 +91,26 @@ export default async function AssignmentDetailPage({
     notFound();
   }
 
-  /*
-   * Get current student's submission
-   */
-  const { data: submission } = await supabase
-    .from("student_submissions")
-    .select(`
-      id,
-      submission_text,
-      file_url,
-      submitted_at,
-      status,
-      marks,
-      feedback
-    `)
-    .eq("assignment_id", assignment.id)
-    .eq("student_id", user.id)
-    .maybeSingle();
+  const { data: submission, error: submissionError } =
+    await supabase
+      .from("student_submissions")
+      .select(`
+        id,
+        submission_text,
+        submission_url,
+        submission_pdf_path,
+        submitted_at,
+        status,
+        marks,
+        feedback
+      `)
+      .eq("assignment_id", assignment.id)
+      .eq("student_id", user.id)
+      .maybeSingle();
+
+  if (submissionError) {
+    throw new Error("Unable to load your assignment submission.");
+  }
 
   const submissionStatus =
     submission?.status ?? "not_submitted";
@@ -150,12 +147,8 @@ export default async function AssignmentDetailPage({
         <Card>
           <CardContent className="flex items-center gap-3 p-5">
             <Clock3 className="h-5 w-5 text-muted-foreground" />
-
             <div>
-              <p className="text-xs text-muted-foreground">
-                Due Date
-              </p>
-
+              <p className="text-xs text-muted-foreground">Due Date</p>
               <p className="mt-1 text-sm font-medium text-foreground">
                 {formatDate(assignment.due_date)}
               </p>
@@ -166,12 +159,10 @@ export default async function AssignmentDetailPage({
         <Card>
           <CardContent className="flex items-center gap-3 p-5">
             <FileText className="h-5 w-5 text-muted-foreground" />
-
             <div>
               <p className="text-xs text-muted-foreground">
                 Maximum Marks
               </p>
-
               <p className="mt-1 text-sm font-medium text-foreground">
                 {assignment.max_marks}
               </p>
@@ -182,12 +173,10 @@ export default async function AssignmentDetailPage({
         <Card>
           <CardContent className="flex items-center gap-3 p-5">
             <CheckCircle2 className="h-5 w-5 text-muted-foreground" />
-
             <div>
               <p className="text-xs text-muted-foreground">
                 Submission
               </p>
-
               <p className="mt-1 text-sm font-medium text-foreground">
                 {formatStatus(submissionStatus)}
               </p>
@@ -203,7 +192,6 @@ export default async function AssignmentDetailPage({
             <h3 className="text-base font-semibold text-foreground">
               Assignment Instructions
             </h3>
-
             <div className="mt-3 whitespace-pre-wrap text-sm leading-7 text-muted-foreground">
               {assignment.instructions}
             </div>
@@ -211,7 +199,7 @@ export default async function AssignmentDetailPage({
         </Card>
       )}
 
-      {/* Submission */}
+      {/* Submission Form */}
       <Card>
         <CardContent className="p-6">
           <h3 className="text-base font-semibold text-foreground">
@@ -219,14 +207,16 @@ export default async function AssignmentDetailPage({
           </h3>
 
           <p className="mt-1 text-sm text-muted-foreground">
-            Submit your answer below. You can update your submission
-            until it has been graded.
+            Submit a written answer, project URL, PDF, or a combination.
+            You can update your submission until it has been graded.
           </p>
 
           <SubmissionForm
             assignmentId={assignment.id}
             existingText={submission?.submission_text ?? null}
+            existingUrl={submission?.submission_url ?? null}
             existingStatus={submission?.status ?? null}
+            hasExistingPdf={Boolean(submission?.submission_pdf_path)}
           />
 
           {/* Grading Information */}
@@ -234,8 +224,7 @@ export default async function AssignmentDetailPage({
             <div className="mt-6 space-y-4 border-t pt-5">
               {submission.submitted_at && (
                 <p className="text-xs text-muted-foreground">
-                  Submitted on{" "}
-                  {formatDate(submission.submitted_at)}
+                  Submitted on {formatDate(submission.submitted_at)}
                 </p>
               )}
 
@@ -245,7 +234,6 @@ export default async function AssignmentDetailPage({
                     <p className="text-xs text-muted-foreground">
                       Marks
                     </p>
-
                     <p className="mt-1 text-lg font-semibold text-foreground">
                       {submission.marks} / {assignment.max_marks}
                     </p>
@@ -257,7 +245,6 @@ export default async function AssignmentDetailPage({
                   <p className="text-xs font-medium text-foreground">
                     Instructor Feedback
                   </p>
-
                   <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-muted-foreground">
                     {submission.feedback}
                   </p>

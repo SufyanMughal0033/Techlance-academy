@@ -1,9 +1,90 @@
+
 "use server";
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 
-export async function createAssignment(formData: FormData): Promise<void> {
+const ASSIGNMENT_BUCKET = "assignment-files";
+const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB
+
+const ALLOWED_EXTENSIONS = [
+  "pdf",
+  "doc",
+  "docx",
+  "ppt",
+  "pptx",
+  "zip",
+  "png",
+  "jpg",
+  "jpeg",
+];
+
+type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
+
+/**
+ * Upload an optional assignment file from the admin's local computer.
+ * Returns the public URL, or null if no file was selected.
+ */
+async function uploadAssignmentFile(
+  supabase: SupabaseServerClient,
+  formData: FormData
+): Promise<string | null> {
+  const file = formData.get("attachment_file");
+
+  if (!(file instanceof File) || file.size === 0) {
+    return null;
+  }
+
+  if (file.size > MAX_FILE_SIZE) {
+    throw new Error("File size must not exceed 20 MB.");
+  }
+
+  const originalName = file.name;
+  const extension = originalName.split(".").pop()?.toLowerCase();
+
+  if (!extension || !ALLOWED_EXTENSIONS.includes(extension)) {
+    throw new Error(
+      "Unsupported file. Allowed formats: PDF, DOC, DOCX, PPT, PPTX, ZIP, PNG, JPG and JPEG."
+    );
+  }
+
+  // Generate a unique storage path to prevent filename collisions.
+  const safeName = originalName
+    .replace(/\.[^/.]+$/, "")
+    .replace(/[^a-zA-Z0-9_-]/g, "-")
+    .replace(/-+/g, "-")
+    .slice(0, 80);
+
+  const filePath = `${crypto.randomUUID()}-${safeName || "assignment"}.${extension}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from(ASSIGNMENT_BUCKET)
+    .upload(filePath, file, {
+      upsert: false,
+      contentType: file.type || "application/octet-stream",
+    });
+
+  if (uploadError) {
+    console.error("Assignment File Upload Error:", uploadError);
+
+    throw new Error(
+      `Assignment file upload failed: ${uploadError.message}`
+    );
+  }
+
+  const { data } = supabase.storage
+    .from(ASSIGNMENT_BUCKET)
+    .getPublicUrl(filePath);
+
+  return data.publicUrl;
+}
+
+/**
+ * CREATE ASSIGNMENT
+ */
+export async function createAssignment(
+  formData: FormData
+): Promise<void> {
   const supabase = await createClient();
 
   const moduleId = String(formData.get("module_id") || "").trim();
@@ -11,33 +92,44 @@ export async function createAssignment(formData: FormData): Promise<void> {
   const description = String(formData.get("description") || "").trim();
   const instructions = String(formData.get("instructions") || "").trim();
   const dueDate = String(formData.get("due_date") || "").trim();
-  const maxMarks = Number(formData.get("max_marks") || 100);
-  const attachmentUrl = String(formData.get("attachment_url") || "").trim();
-  const assignmentOrder = Number(
-    formData.get("assignment_order") || 1
-  );
-  const status = String(formData.get("status") || "published").trim();
+
+  const maxMarksValue = String(formData.get("max_marks") || "100").trim();
+  const assignmentOrderValue = String(
+    formData.get("assignment_order") || "1"
+  ).trim();
+
+  const maxMarks = Number(maxMarksValue);
+  const assignmentOrder = Number(assignmentOrderValue);
+
+  let attachmentUrl = String(
+    formData.get("attachment_url") || ""
+  ).trim();
+
+  const status = String(
+    formData.get("status") || "published"
+  ).trim();
 
   if (!moduleId || !title) {
-    console.error("Create Assignment: Module and title are required.");
-    return;
+    throw new Error("Module and assignment title are required.");
   }
 
   if (!Number.isInteger(maxMarks) || maxMarks <= 0) {
-    console.error("Create Assignment: Max marks must be greater than 0.");
-    return;
+    throw new Error("Max marks must be a positive integer.");
   }
 
   if (!Number.isInteger(assignmentOrder) || assignmentOrder < 1) {
-    console.error(
-      "Create Assignment: Assignment order must be a positive number."
-    );
-    return;
+    throw new Error("Assignment order must be a positive integer.");
   }
 
   if (!["published", "draft", "closed"].includes(status)) {
-    console.error("Create Assignment: Invalid assignment status.");
-    return;
+    throw new Error("Invalid assignment status.");
+  }
+
+  // Upload the selected local file, if provided.
+  const uploadedUrl = await uploadAssignmentFile(supabase, formData);
+
+  if (uploadedUrl) {
+    attachmentUrl = uploadedUrl;
   }
 
   const { error } = await supabase.from("assignments").insert({
@@ -60,17 +152,18 @@ export async function createAssignment(formData: FormData): Promise<void> {
       code: error.code,
     });
 
-    throw new Error(
-      `Create Assignment Error: ${error.message} | Details: ${
-        error.details || "none"
-      } | Hint: ${error.hint || "none"}`
-    );
+    throw new Error(`Failed to create assignment: ${error.message}`);
   }
 
   revalidatePath("/admin/assignments");
 }
 
-export async function updateAssignment(formData: FormData): Promise<void> {
+/**
+ * UPDATE ASSIGNMENT
+ */
+export async function updateAssignment(
+  formData: FormData
+): Promise<void> {
   const supabase = await createClient();
 
   const id = String(formData.get("id") || "").trim();
@@ -79,35 +172,47 @@ export async function updateAssignment(formData: FormData): Promise<void> {
   const description = String(formData.get("description") || "").trim();
   const instructions = String(formData.get("instructions") || "").trim();
   const dueDate = String(formData.get("due_date") || "").trim();
-  const maxMarks = Number(formData.get("max_marks") || 100);
-  const attachmentUrl = String(formData.get("attachment_url") || "").trim();
-  const assignmentOrder = Number(
-    formData.get("assignment_order") || 1
-  );
-  const status = String(formData.get("status") || "published").trim();
+
+  const maxMarksValue = String(formData.get("max_marks") || "100").trim();
+  const assignmentOrderValue = String(
+    formData.get("assignment_order") || "1"
+  ).trim();
+
+  const maxMarks = Number(maxMarksValue);
+  const assignmentOrder = Number(assignmentOrderValue);
+
+  let attachmentUrl = String(
+    formData.get("attachment_url") || ""
+  ).trim();
+
+  const status = String(
+    formData.get("status") || "published"
+  ).trim();
 
   if (!id || !moduleId || !title) {
-    console.error(
-      "Update Assignment: Assignment ID, module and title are required."
+    throw new Error(
+      "Assignment ID, module and title are required."
     );
-    return;
   }
 
   if (!Number.isInteger(maxMarks) || maxMarks <= 0) {
-    console.error("Update Assignment: Max marks must be greater than 0.");
-    return;
+    throw new Error("Max marks must be a positive integer.");
   }
 
   if (!Number.isInteger(assignmentOrder) || assignmentOrder < 1) {
-    console.error(
-      "Update Assignment: Assignment order must be a positive number."
-    );
-    return;
+    throw new Error("Assignment order must be a positive integer.");
   }
 
   if (!["published", "draft", "closed"].includes(status)) {
-    console.error("Update Assignment: Invalid assignment status.");
-    return;
+    throw new Error("Invalid assignment status.");
+  }
+
+  // If a new file is selected, its URL replaces the existing URL.
+  // Otherwise, the existing attachment URL is preserved.
+  const uploadedUrl = await uploadAssignmentFile(supabase, formData);
+
+  if (uploadedUrl) {
+    attachmentUrl = uploadedUrl;
   }
 
   const { error } = await supabase
@@ -134,24 +239,24 @@ export async function updateAssignment(formData: FormData): Promise<void> {
       code: error.code,
     });
 
-    throw new Error(
-      `Update Assignment Error: ${error.message} | Details: ${
-        error.details || "none"
-      } | Hint: ${error.hint || "none"}`
-    );
+    throw new Error(`Failed to update assignment: ${error.message}`);
   }
 
   revalidatePath("/admin/assignments");
 }
 
-export async function deleteAssignment(formData: FormData): Promise<void> {
+/**
+ * DELETE ASSIGNMENT
+ */
+export async function deleteAssignment(
+  formData: FormData
+): Promise<void> {
   const supabase = await createClient();
 
   const id = String(formData.get("id") || "").trim();
 
   if (!id) {
-    console.error("Delete Assignment: Assignment ID is required.");
-    return;
+    throw new Error("Assignment ID is required.");
   }
 
   const { error } = await supabase
@@ -167,11 +272,7 @@ export async function deleteAssignment(formData: FormData): Promise<void> {
       code: error.code,
     });
 
-    throw new Error(
-      `Delete Assignment Error: ${error.message} | Details: ${
-        error.details || "none"
-      } | Hint: ${error.hint || "none"}`
-    );
+    throw new Error(`Failed to delete assignment: ${error.message}`);
   }
 
   revalidatePath("/admin/assignments");
